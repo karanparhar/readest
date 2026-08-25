@@ -43,7 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       session: { access_token: string; refresh_token: string; user: User } | null,
     ) => {
       if (session) {
-        console.log('Syncing session');
+        const provider = (session.user.app_metadata as { provider?: string } | undefined)?.provider;
+        if (provider && provider !== 'google') {
+          localStorage.setItem('lastKickedProvider', provider);
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          supabase.auth.signOut();
+          return;
+        }
+        localStorage.removeItem('lastKickedProvider');
         const { access_token, refresh_token, user } = session;
         localStorage.setItem('token', access_token);
         localStorage.setItem('refresh_token', refresh_token);
