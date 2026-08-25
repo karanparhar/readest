@@ -32,7 +32,6 @@ interface SingleInstancePayload {
 
 const WEB_AUTH_CALLBACK = `${getBaseUrl()}/auth/callback`;
 const DEEPLINK_CALLBACK = 'readest://auth-callback';
-const USE_APPLE_SIGN_IN = process.env['NEXT_PUBLIC_USE_APPLE_SIGN_IN'] === 'true';
 
 export default function AuthPage() {
   const _ = useTranslation();
@@ -57,7 +56,7 @@ export default function AuthPage() {
     // where custom URL schemes are not supported
     if (
       !useCustomeOAuth.current &&
-      (process.env.NODE_ENV === 'production' || appService?.isMobileApp || USE_APPLE_SIGN_IN)
+      (process.env.NODE_ENV === 'production' || appService?.isMobileApp)
     ) {
       if (appService?.isMobileApp) {
         return isOAuth ? DEEPLINK_CALLBACK : WEB_AUTH_CALLBACK;
@@ -111,10 +110,6 @@ export default function AuthPage() {
     }
   };
 
-  const tauriProviderSignIn = async (provider: OAuthProvider) => {
-    return tauriSignIn(provider);
-  };
-
   const webProviderSignIn = async (provider: OAuthProvider) => {
     if (!supabase) {
       throw new Error('No backend connected');
@@ -157,7 +152,7 @@ export default function AuthPage() {
     try {
       if (
         !useCustomeOAuth.current &&
-        (process.env.NODE_ENV === 'production' || appService?.isMobileApp || USE_APPLE_SIGN_IN)
+        (process.env.NODE_ENV === 'production' || appService?.isMobileApp)
       ) {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         const currentWindow = getCurrentWindow();
@@ -308,7 +303,7 @@ export default function AuthPage() {
             appService?.hasTrafficLight ? 'mt-24' : 'mt-16',
           )}
         >
-          <AuthPanel onProviderSignIn={tauriProviderSignIn} />
+          <AuthPanel onProviderSignIn={tauriSignIn} />
         </div>
       </div>
     </div>
