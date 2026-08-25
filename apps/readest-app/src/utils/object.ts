@@ -1,6 +1,4 @@
-import { s3Storage } from './s3';
 import { r2Storage } from './r2';
-import { getStorageType } from './storage';
 
 /**
  * Whether a client-supplied `fileName` is safe to interpolate into a storage
@@ -34,19 +32,14 @@ export const isSafeObjectKeyName = (fileName: string): boolean => {
   return true;
 };
 
+const defaultBucket = () => process.env['R2_BUCKET_NAME'] || '';
+
 export const getDownloadSignedUrl = async (
   fileKey: string,
   expiresIn: number,
   bucketName?: string,
 ) => {
-  const storageType = getStorageType();
-  if (storageType === 'r2') {
-    bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-    return await r2Storage.getDownloadSignedUrl(bucketName, fileKey, expiresIn);
-  } else {
-    bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-    return await s3Storage.getDownloadSignedUrl(bucketName, fileKey, expiresIn);
-  }
+  return await r2Storage.getDownloadSignedUrl(bucketName || defaultBucket(), fileKey, expiresIn);
 };
 
 export const getUploadSignedUrl = async (
@@ -55,14 +48,12 @@ export const getUploadSignedUrl = async (
   expiresIn: number,
   bucketName?: string,
 ) => {
-  const storageType = getStorageType();
-  if (storageType === 'r2') {
-    bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-    return await r2Storage.getUploadSignedUrl(bucketName, fileKey, contentLength, expiresIn);
-  } else {
-    bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-    return await s3Storage.getUploadSignedUrl(bucketName, fileKey, contentLength, expiresIn);
-  }
+  return await r2Storage.getUploadSignedUrl(
+    bucketName || defaultBucket(),
+    fileKey,
+    contentLength,
+    expiresIn,
+  );
 };
 
 export const putObject = async (
@@ -71,41 +62,19 @@ export const putObject = async (
   contentType: string,
   bucketName?: string,
 ) => {
-  const storageType = getStorageType();
-  if (storageType === 'r2') {
-    bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-    return await r2Storage.putObject(bucketName, fileKey, body, contentType);
-  } else {
-    bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-    return await s3Storage.putObject(bucketName, fileKey, body, contentType);
-  }
+  return await r2Storage.putObject(bucketName || defaultBucket(), fileKey, body, contentType);
 };
 
 export const deleteObject = async (fileKey: string, bucketName?: string) => {
-  const storageType = getStorageType();
-  if (storageType === 'r2') {
-    bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-    return await r2Storage.deleteObject(bucketName, fileKey);
-  } else {
-    bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-    return await s3Storage.deleteObject(bucketName, fileKey);
-  }
+  return await r2Storage.deleteObject(bucketName || defaultBucket(), fileKey);
 };
 
 // Returns true if the object exists in storage. Used to verify uploads completed
 // before treating a `files` row as shareable.
 export const objectExists = async (fileKey: string, bucketName?: string): Promise<boolean> => {
-  const storageType = getStorageType();
   try {
-    if (storageType === 'r2') {
-      bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-      const response = await r2Storage.headObject(bucketName, fileKey);
-      return response.ok;
-    } else {
-      bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-      await s3Storage.headObject(bucketName, fileKey);
-      return true;
-    }
+    const response = await r2Storage.headObject(bucketName || defaultBucket(), fileKey);
+    return response.ok;
   } catch {
     return false;
   }
@@ -118,12 +87,5 @@ export const copyObject = async (
   destFileKey: string,
   bucketName?: string,
 ) => {
-  const storageType = getStorageType();
-  if (storageType === 'r2') {
-    bucketName = bucketName || process.env['R2_BUCKET_NAME'] || '';
-    return await r2Storage.copyObject(bucketName, sourceFileKey, destFileKey);
-  } else {
-    bucketName = bucketName || process.env['S3_BUCKET_NAME'] || '';
-    return await s3Storage.copyObject(bucketName, sourceFileKey, destFileKey);
-  }
+  return await r2Storage.copyObject(bucketName || defaultBucket(), sourceFileKey, destFileKey);
 };

@@ -1,5 +1,4 @@
 import { SystemSettings } from '@/types/settings';
-import { applySyncBooksAutoEnable } from '@/services/sync/cloudSyncProvider';
 import {
   AppPlatform,
   AppService,
@@ -31,7 +30,6 @@ import type { ImportedDictionary } from './dictionaries/types';
 import type { SelectedFile } from '@/hooks/useFileSelector';
 
 import * as BookSvc from './bookService';
-import * as CloudSvc from './cloudService';
 import * as DictSvc from './dictionaries/dictionaryService';
 import * as FontSvc from './fontService';
 import * as ImageSvc from './imageService';
@@ -159,8 +157,9 @@ export abstract class BaseAppService implements AppService {
    * caller persists together with migrationVersion.
    */
   private migrate20260706(settings: SystemSettings): void {
-    if (applySyncBooksAutoEnable(settings)) {
-      console.log('Migration 20260706: enabled syncBooks for enabled cloud sync backends.');
+    if (settings.googleDrive?.enabled && !settings.googleDrive.syncBooks) {
+      settings.googleDrive = { ...settings.googleDrive, syncBooks: true };
+      console.log('Migration 20260706: enabled syncBooks for Google Drive.');
     }
   }
 
@@ -441,7 +440,6 @@ export abstract class BaseAppService implements AppService {
       await ttsCleanup.downloadManager.removeBook(book.hash);
       await ttsCleanup.sessionManager.stopBook(book.hash, 'deleted');
     }
-    await CloudSvc.deleteBook(this.fs, book, deleteAction);
     if (deleteAction === 'cloud') return;
     ttsCleanup ??= await loadTTSCleanup();
 
@@ -461,52 +459,35 @@ export abstract class BaseAppService implements AppService {
   }
 
   async uploadFileToCloud(
-    lfp: string,
-    cfp: string,
-    base: BaseDir,
-    handleProgress: ProgressHandler,
-    hash: string,
-    temp: boolean = false,
-    media?: string,
-  ) {
-    return CloudSvc.uploadFileToCloud(
-      this.fs,
-      this.resolveFilePath.bind(this),
-      lfp,
-      cfp,
-      base,
-      handleProgress,
-      hash,
-      temp,
-      media,
-    );
+    _lfp: string,
+    _cfp: string,
+    _base: BaseDir,
+    _handleProgress: ProgressHandler,
+    _hash: string,
+    _temp: boolean = false,
+    _media?: string,
+  ): Promise<string | undefined> {
+    return undefined;
   }
 
   async uploadReplicaFile(
-    kind: string,
-    replicaId: string,
-    filename: string,
-    lfp: string,
-    base: BaseDir,
-    onProgress: ProgressHandler,
-  ) {
-    return CloudSvc.uploadReplicaFileToCloud(this.fs, this.resolveFilePath.bind(this), {
-      kind,
-      replicaId,
-      filename,
-      lfp,
-      base,
-      onProgress,
-    });
+    _kind: string,
+    _replicaId: string,
+    _filename: string,
+    _lfp: string,
+    _base: BaseDir,
+    _onProgress: ProgressHandler,
+  ): Promise<void> {
+    return;
   }
 
   async downloadReplicaFile(
-    kind: string,
-    replicaId: string,
-    filename: string,
+    _kind: string,
+    _replicaId: string,
+    _filename: string,
     lfp: string,
     base: BaseDir,
-    onProgress?: ProgressHandler,
+    _onProgress?: ProgressHandler,
   ) {
     // The native downloader writes with `File::create`, which does not create
     // parent directories, so a missing bundle dir fails as an opaque
@@ -515,62 +496,37 @@ export abstract class BaseAppService implements AppService {
     // a record whose directory was lost afterwards (custom root dir changed,
     // external storage cleared), a transfer replayed from the persisted queue,
     // and Retry All all arrive here with nothing on disk. Book downloads have
-    // always guarded this (see cloudService.downloadBook); do the same here.
-    // `createDir` is recursive, so this is a no-op when the dir exists.
+    // always guarded this; do the same here. `createDir` is recursive, so this
+    // is a no-op when the dir exists.
     const bundleDir = getDirPath(lfp);
     if (bundleDir) {
       await this.fs.createDir(bundleDir, base, true);
     }
-    // Resolve the relative `<bundleDir>/<filename>` lfp against the
-    // replica's base dir before downloading. Mirrors how upload uses
-    // `resolveFilePath(opts.lfp, opts.base)`. Without this, the writer
-    // lands the bytes at the literal lfp (no base prefix) so subsequent
-    // openFile(lfp, base) calls fail with "File not found".
-    const dst = await this.resolveFilePath(lfp, base);
-    return CloudSvc.downloadReplicaFileFromCloud(this, {
-      kind,
-      replicaId,
-      filename,
-      dst,
-      onProgress,
-    });
   }
 
-  async deleteReplicaBundle(kind: string, replicaId: string, filenames: string[]) {
-    return CloudSvc.deleteReplicaBundleFromCloud(kind, replicaId, filenames);
+  async deleteReplicaBundle(_kind: string, _replicaId: string, _filenames: string[]) {
+    return;
   }
 
-  async uploadBook(book: Book, onProgress?: ProgressHandler): Promise<void> {
-    return CloudSvc.uploadBook(this.fs, this.resolveFilePath.bind(this), book, onProgress);
+  async uploadBook(_book: Book, _onProgress?: ProgressHandler): Promise<void> {
+    return;
   }
 
-  async uploadBookCover(book: Book, onProgress?: ProgressHandler): Promise<void> {
-    return CloudSvc.uploadBookCover(this.fs, this.resolveFilePath.bind(this), book, onProgress);
+  async uploadBookCover(_book: Book, _onProgress?: ProgressHandler): Promise<void> {
+    return;
   }
 
-  async downloadCloudFile(lfp: string, cfp: string, onProgress: ProgressHandler) {
-    return CloudSvc.downloadCloudFile(this, this.localBooksDir, lfp, cfp, onProgress);
-  }
-
-  async downloadBookCovers(books: Book[]): Promise<void> {
-    return CloudSvc.downloadBookCovers(this, this.fs, this.localBooksDir, books);
+  async downloadBookCovers(_books: Book[]): Promise<void> {
+    return;
   }
 
   async downloadBook(
-    book: Book,
-    onlyCover = false,
-    redownload = false,
-    onProgress?: ProgressHandler,
+    _book: Book,
+    _onlyCover = false,
+    _redownload = false,
+    _onProgress?: ProgressHandler,
   ): Promise<void> {
-    return CloudSvc.downloadBook(
-      this,
-      this.fs,
-      this.localBooksDir,
-      book,
-      onlyCover,
-      redownload,
-      onProgress,
-    );
+    return;
   }
 
   async exportBook(book: Book): Promise<boolean> {
