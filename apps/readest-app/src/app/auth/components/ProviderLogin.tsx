@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 
-export type OAuthProvider = 'google' | 'apple' | 'azure' | 'github' | 'discord';
+export type OAuthProvider = 'google';
 
 interface ProviderLoginProp {
   provider: OAuthProvider;

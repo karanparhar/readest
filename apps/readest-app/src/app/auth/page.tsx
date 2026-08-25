@@ -20,7 +20,6 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { invoke } from '@tauri-apps/api/core';
 import { handleAuthCallback, parseOAuthCallbackUrl } from '@/helpers/auth';
 import { getUserProfilePlan } from '@/utils/access';
-import { getAppleIdAuth, Scope } from './utils/appleIdAuth';
 import { authWithCustomTab, authWithSafari } from './utils/nativeAuth';
 import WindowButtons from '@/components/WindowButtons';
 import type { OAuthProvider } from './components/ProviderLogin';
@@ -77,30 +76,6 @@ export default function AuthPage() {
       : `${window.location.origin}/auth/callback`;
   };
 
-  const tauriSignInApple = async () => {
-    if (!supabase) {
-      throw new Error('No backend connected');
-    }
-    supabase.auth.signOut();
-    const request = {
-      scope: ['fullName', 'email'] as Scope[],
-    };
-    if (appService?.isIOSApp || USE_APPLE_SIGN_IN) {
-      const appleAuthResponse = await getAppleIdAuth(request);
-      if (appleAuthResponse.identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'apple',
-          token: appleAuthResponse.identityToken,
-        });
-        if (error) {
-          console.error('Authentication error:', error);
-        }
-      }
-    } else {
-      console.log('Sign in with Apple on this platform is not supported yet');
-    }
-  };
-
   const tauriSignIn = async (provider: OAuthProvider) => {
     if (!supabase) {
       throw new Error('No backend connected');
@@ -137,9 +112,6 @@ export default function AuthPage() {
   };
 
   const tauriProviderSignIn = async (provider: OAuthProvider) => {
-    if (provider === 'apple' && (appService?.isIOSApp || USE_APPLE_SIGN_IN)) {
-      return tauriSignInApple();
-    }
     return tauriSignIn(provider);
   };
 
@@ -336,12 +308,7 @@ export default function AuthPage() {
             appService?.hasTrafficLight ? 'mt-24' : 'mt-16',
           )}
         >
-          <AuthPanel
-            supabaseClient={supabase}
-            magicLink={true}
-            redirectTo={getTauriRedirectTo(false)}
-            onProviderSignIn={tauriProviderSignIn}
-          />
+          <AuthPanel onProviderSignIn={tauriProviderSignIn} />
         </div>
       </div>
     </div>
@@ -354,12 +321,7 @@ export default function AuthPage() {
       >
         <IoArrowBack className='text-base-content' />
       </button>
-      <AuthPanel
-        supabaseClient={supabase}
-        magicLink={true}
-        redirectTo={getWebRedirectTo()}
-        onProviderSignIn={webProviderSignIn}
-      />
+      <AuthPanel onProviderSignIn={webProviderSignIn} />
     </div>
   );
 }
