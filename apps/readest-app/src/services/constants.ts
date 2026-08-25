@@ -26,11 +26,7 @@ import {
   ReadSettings,
   ReadwiseSettings,
   SystemSettings,
-  WebDAVSettings,
   GoogleDriveSettings,
-  S3Settings,
-  OneDriveSettings,
-  ICloudSettings,
 } from '@/types/settings';
 import { UserStorageQuota, UserDailyTranslationQuota } from '@/types/quota';
 import { getDefaultMaxBlockSize, getDefaultMaxInlineSize } from '@/utils/config';
@@ -123,7 +119,7 @@ export const DEFAULT_WEBDAV_SETTINGS = {
   strategy: 'silent',
   deviceId: '',
   lastSyncedAt: 0,
-} as WebDAVSettings;
+};
 
 export const DEFAULT_GOOGLE_DRIVE_SETTINGS = {
   enabled: false,
@@ -148,7 +144,7 @@ export const DEFAULT_S3_SETTINGS = {
   strategy: 'silent',
   deviceId: '',
   lastSyncedAt: 0,
-} as S3Settings;
+};
 
 export const DEFAULT_ONEDRIVE_SETTINGS = {
   enabled: false,
@@ -158,17 +154,7 @@ export const DEFAULT_ONEDRIVE_SETTINGS = {
   strategy: 'silent',
   deviceId: '',
   lastSyncedAt: 0,
-} as OneDriveSettings;
-
-export const DEFAULT_ICLOUD_SETTINGS = {
-  enabled: false,
-  syncProgress: true,
-  syncNotes: true,
-  syncBooks: false,
-  strategy: 'silent',
-  deviceId: '',
-  lastSyncedAt: 0,
-} as ICloudSettings;
+};
 
 export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   keepLogin: false,
@@ -230,11 +216,7 @@ export const DEFAULT_SYSTEM_SETTINGS: Partial<SystemSettings> = {
   bookorbit: DEFAULT_BOOKORBIT_SETTINGS,
   readwise: DEFAULT_READWISE_SETTINGS,
   hardcover: DEFAULT_HARDCOVER_SETTINGS,
-  webdav: DEFAULT_WEBDAV_SETTINGS,
   googleDrive: DEFAULT_GOOGLE_DRIVE_SETTINGS,
-  s3: DEFAULT_S3_SETTINGS,
-  onedrive: DEFAULT_ONEDRIVE_SETTINGS,
-  icloud: DEFAULT_ICLOUD_SETTINGS,
   aiSettings: DEFAULT_AI_SETTINGS,
 
   lastSyncedAtBooks: 0,

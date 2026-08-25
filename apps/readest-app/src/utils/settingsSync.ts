@@ -32,22 +32,7 @@ export const SETTINGS_SYNC_EVENT = 'global-settings-window-sync';
  * switch could win and silently flip the selection back).
  */
 export interface CloudSyncProviderFlags {
-  webdav: { enabled: boolean; providerSelectedAt?: number };
   googleDrive: { enabled: boolean; providerSelectedAt?: number };
-  /** Optional: absent on payloads from pre-S3 windows (treated as unchanged). */
-  s3?: { enabled: boolean; providerSelectedAt?: number };
-  /** Optional: absent on payloads from pre-OneDrive windows (treated as unchanged). */
-  onedrive?: { enabled: boolean; providerSelectedAt?: number };
-  /** Optional: absent on payloads from pre-iCloud windows (treated as unchanged). */
-  icloud?: { enabled: boolean; providerSelectedAt?: number };
-  /**
-   * Optional in two senses: absent on payloads from pre-#5062 windows, and
-   * absent when the source window has never had the slice written. `enabled`
-   * is itself optional because `undefined` is meaningful there (it means
-   * "derive from the third-party flags") — coercing it to `false` would
-   * silently switch Readest Cloud off on the receiver.
-   */
-  readestCloud?: { enabled?: boolean; disabledAt?: number };
 }
 
 export interface SettingsSyncPayload {
@@ -81,23 +66,7 @@ export const mergeSyncedGlobalSettings = (
     globalReadSettings: payload.globalReadSettings,
   };
   if (payload.cloudSyncProviders) {
-    merged.webdav = { ...local.webdav, ...payload.cloudSyncProviders.webdav };
     merged.googleDrive = { ...local.googleDrive, ...payload.cloudSyncProviders.googleDrive };
-    if (payload.cloudSyncProviders.s3) {
-      merged.s3 = { ...local.s3, ...payload.cloudSyncProviders.s3 };
-    }
-    if (payload.cloudSyncProviders.onedrive) {
-      merged.onedrive = { ...local.onedrive, ...payload.cloudSyncProviders.onedrive };
-    }
-    if (payload.cloudSyncProviders.icloud) {
-      merged.icloud = { ...local.icloud, ...payload.cloudSyncProviders.icloud };
-    }
-    if (payload.cloudSyncProviders.readestCloud) {
-      merged.readestCloud = {
-        ...local.readestCloud,
-        ...payload.cloudSyncProviders.readestCloud,
-      };
-    }
   }
   return merged;
 };
@@ -120,33 +89,11 @@ export const broadcastGlobalSettings = async (
     };
     if (opts.includeCloudSyncProviders) {
       payload.cloudSyncProviders = {
-        webdav: {
-          enabled: !!settings.webdav?.enabled,
-          providerSelectedAt: settings.webdav?.providerSelectedAt,
-        },
         googleDrive: {
           enabled: !!settings.googleDrive?.enabled,
           providerSelectedAt: settings.googleDrive?.providerSelectedAt,
         },
-        s3: {
-          enabled: !!settings.s3?.enabled,
-          providerSelectedAt: settings.s3?.providerSelectedAt,
-        },
-        onedrive: {
-          enabled: !!settings.onedrive?.enabled,
-          providerSelectedAt: settings.onedrive?.providerSelectedAt,
-        },
-        icloud: {
-          enabled: !!settings.icloud?.enabled,
-          providerSelectedAt: settings.icloud?.providerSelectedAt,
-        },
       };
-      if (settings.readestCloud) {
-        payload.cloudSyncProviders.readestCloud = {
-          enabled: settings.readestCloud.enabled,
-          disabledAt: settings.readestCloud.disabledAt,
-        };
-      }
     }
     await emit(SETTINGS_SYNC_EVENT, payload);
   } catch (err) {

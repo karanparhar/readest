@@ -141,57 +141,12 @@ export interface HardcoverSettings {
 }
 
 /**
- * Sort field for the WebDAV browser listing. 'name' reproduces the
- * legacy directories-first/alphabetical default; the date fields drive
- * the "pull up recent books" use case ('created' relies on the server
- * reporting `<creationdate>`, which not all do). 'size' orders files.
- */
-export type WebDAVBrowseSortByType = 'name' | 'modified' | 'created' | 'size';
-
-export interface WebDAVSettings {
-  enabled: boolean;
-  serverUrl: string;
-  username: string;
-  password: string;
-  rootPath: string;
-  // Browser sort preference, persisted so a chosen "recent first" order
-  // survives across sessions. Both optional: absent => name/ascending,
-  // matching the pre-feature default (no migration needed).
-  browseSortBy?: WebDAVBrowseSortByType;
-  browseSortAscending?: boolean;
-  // Sync sub-toggles. WebDAV sync runs as a parallel channel alongside the
-  // native cloud sync, KOSync, Readwise, and Hardcover; each sub-toggle
-  // gates a category independently so a user can e.g. mirror progress to
-  // their own server without uploading book binaries.
-  syncProgress?: boolean;
-  syncNotes?: boolean;
-  syncBooks?: boolean;
-  // When true, "Sync now" re-checks every book instead of only those whose
-  // local copy differs from the shared library.json index (the default
-  // incremental walk). An escape hatch for drift or a first full sync.
-  fullSync?: boolean;
-  // Conflict policy — same vocabulary as KOSync so users only learn one.
-  strategy?: KOSyncStrategy;
-  // Stable per-device id (uuidv4); written into library.json so we can tell
-  // which device last touched a given book.
-  deviceId?: string;
-  // Wall-clock millisecond timestamp of the last successful end-to-end
-  // sync, surfaced in the WebDAV settings sub-page.
-  lastSyncedAt?: number;
-  // Device-local wall-clock millis of when this provider was made the
-  // selected cloud sync backend on THIS device. Anchors the mixed-fleet
-  // detection probe: any native /api/sync row newer than this means
-  // another device is still writing the gated channels.
-  providerSelectedAt?: number;
-}
-
-/**
- * Google Drive file-sync settings. A second file-sync backend alongside
- * {@link WebDAVSettings}, sharing the same engine, sub-toggles, and strategy
- * vocabulary. Drive has no URL / credentials / root path (it is OAuth + a
- * fixed `/Readest` namespace under the `drive.file` scope), and no BYO client.
- * The OAuth token is NOT stored here — it lives in the OS keychain. `deviceId`
- * and `lastSyncedAt` are device-local (excluded from cross-device restore).
+ * Google Drive file-sync settings. Sharing the same engine, sub-toggles,
+ * and strategy vocabulary. Drive has no URL / credentials / root path (it
+ * is OAuth + a fixed `/Readest` namespace under the `drive.file` scope),
+ * and no BYO client. The OAuth token is NOT stored here — it lives in the
+ * OS keychain. `deviceId` and `lastSyncedAt` are device-local (excluded
+ * from cross-device restore).
  */
 export interface GoogleDriveSettings {
   enabled: boolean;
@@ -204,103 +159,13 @@ export interface GoogleDriveSettings {
   strategy?: KOSyncStrategy;
   deviceId?: string;
   lastSyncedAt?: number;
-  /** See {@link WebDAVSettings.providerSelectedAt}. */
-  providerSelectedAt?: number;
-}
-
-/**
- * S3-compatible object-store file-sync settings — the third file-sync
- * backend alongside {@link WebDAVSettings} and {@link GoogleDriveSettings},
- * sharing the same engine, sub-toggles, and strategy vocabulary. Covers any
- * SigV4 endpoint: Cloudflare R2, AWS S3, MinIO, Backblaze B2. Addressing is
- * path-style (`<endpoint>/<bucket>/<key>`). Credentials live here like
- * WebDAV's (same encrypted cross-device credential-sync semantics).
- */
-export interface S3Settings {
-  enabled: boolean;
-  /** Service endpoint origin, e.g. `https://<account-id>.r2.cloudflarestorage.com`. */
-  endpoint: string;
-  /** SigV4 region; 'auto' works for R2/MinIO, AWS wants the bucket region. */
-  region?: string;
-  bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  syncProgress?: boolean;
-  syncNotes?: boolean;
-  syncBooks?: boolean;
-  fullSync?: boolean;
-  strategy?: KOSyncStrategy;
-  deviceId?: string;
-  lastSyncedAt?: number;
-  /** See {@link WebDAVSettings.providerSelectedAt}. */
-  providerSelectedAt?: number;
-}
-
-/**
- * Microsoft OneDrive file-sync settings. An OAuth-based file-sync backend
- * alongside {@link GoogleDriveSettings}, storing data in the Graph App Folder
- * (approot). No URL / credentials / root path and no BYO client; the OAuth
- * token lives in the OS keychain (native) or sessionStorage (web), never here.
- * `deviceId`/`lastSyncedAt`/`providerSelectedAt` are device-local.
- */
-export interface OneDriveSettings {
-  enabled: boolean;
-  /** Connected account's userPrincipalName/email, shown in the settings UI. */
-  accountLabel?: string;
-  syncProgress?: boolean;
-  syncNotes?: boolean;
-  syncBooks?: boolean;
-  fullSync?: boolean;
-  strategy?: KOSyncStrategy;
-  deviceId?: string;
-  lastSyncedAt?: number;
-  /** See {@link WebDAVSettings.providerSelectedAt}. */
-  providerSelectedAt?: number;
-}
-
-/**
- * iCloud Drive file-sync settings. Available only in the iOS/macOS Tauri
- * apps: the backend is the app's ubiquity container, synced by the OS. No
- * credentials and no OAuth — the device's iCloud session is the account.
- * `deviceId`/`lastSyncedAt`/`providerSelectedAt` are device-local.
- */
-export interface ICloudSettings {
-  enabled: boolean;
-  syncProgress?: boolean;
-  syncNotes?: boolean;
-  syncBooks?: boolean;
-  fullSync?: boolean;
-  strategy?: KOSyncStrategy;
-  deviceId?: string;
-  lastSyncedAt?: number;
-  /** See {@link WebDAVSettings.providerSelectedAt}. */
-  providerSelectedAt?: number;
-}
-
-/**
- * Readest Cloud's own library-sync switch. Readest Cloud used to be the
- * derived fallback — "on" whenever no third-party provider was enabled —
- * because exactly one provider could own the library channels. Providers are
- * now independently selectable (#5062), so Readest Cloud needs a flag of its
- * own.
- *
- * `enabled` is DELIBERATELY optional with no default (this slice must never
- * enter `DEFAULT_SYSTEM_SETTINGS`): an absent value falls back to the old
- * derivation, so upgrading users keep exactly the behaviour they had and no
- * migration has to rewrite anyone's settings. It is written only once the user
- * touches a Cloud Sync checkbox.
- *
- * Device-local, like the other providers' `enabled` flags.
- */
-export interface ReadestCloudSettings {
-  enabled?: boolean;
   /**
-   * Device-local wall-clock millis of when this device turned Readest Cloud
-   * off. Anchors the mixed-fleet probe: a native /api/sync row newer than this
-   * means another device is still writing the channels this one stopped
-   * writing. Excluded from cross-device restore.
+   * Device-local wall-clock millis of when this provider was made the
+   * selected cloud sync backend on THIS device. Anchors the mixed-fleet
+   * detection probe: any native /api/sync row newer than this means
+   * another device is still writing the gated channels.
    */
-  disabledAt?: number;
+  providerSelectedAt?: number;
 }
 
 /**
@@ -497,13 +362,7 @@ export interface SystemSettings {
   bookorbit: BookOrbitSettings;
   readwise: ReadwiseSettings;
   hardcover: HardcoverSettings;
-  /** Optional by design — see {@link ReadestCloudSettings}. Never defaulted. */
-  readestCloud?: ReadestCloudSettings;
-  webdav: WebDAVSettings;
   googleDrive: GoogleDriveSettings;
-  s3: S3Settings;
-  onedrive: OneDriveSettings;
-  icloud: ICloudSettings;
 
   aiSettings: AISettings;
   /**
