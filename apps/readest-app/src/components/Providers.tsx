@@ -40,6 +40,7 @@ import TelemetryConsentDialog from '@/components/TelemetryConsentDialog';
 import { upgradeToKeychainIfAvailable } from '@/libs/crypto/passphrase';
 import { cryptoSession } from '@/libs/crypto/session';
 import { useAppLockStore } from '@/store/appLockStore';
+import { stripRemovedBackends } from '@/store/settingsStore';
 import { initSettingsSync } from '@/services/sync/replicaSettingsSync';
 
 // One-time, on first launch after this feature ships, decide how to handle
@@ -142,11 +143,12 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
       initSystemThemeListener(appService);
       const hadSettingsFilePromise = appService.exists(SETTINGS_FILENAME, 'Settings');
       appService.loadSettings().then(async (settings) => {
-        const globalViewSettings = settings.globalViewSettings;
+        const stripped = stripRemovedBackends(settings);
+        const globalViewSettings = stripped.globalViewSettings;
         const hadSettingsFile = await hadSettingsFilePromise.catch(() => false);
         finalizeTelemetryDecision({
           appService,
-          settings,
+          settings: stripped,
           isNewUser: !hadSettingsFile,
           onShowPrompt: () => setShowTelemetryConsent(true),
         });
@@ -158,13 +160,13 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
         // fallback re-derives the id from name, which mismatches whenever the
         // saved id wasn't computed from the current name (legacy imports,
         // cross-device sync, name-based id collisions).
-        if (settings.customTextures?.length) {
-          useCustomTextureStore.getState().setTextures(settings.customTextures);
+        if (stripped.customTextures?.length) {
+          useCustomTextureStore.getState().setTextures(stripped.customTextures);
         }
         // The app boots onto the library, so apply the library background
         // (which inherits the reader/global texture until decoupled). The
         // reader re-applies its own texture when a book opens (issue #4743).
-        applyBackgroundTexture(envConfig, getLibraryViewSettings(settings));
+        applyBackgroundTexture(envConfig, getLibraryViewSettings(stripped));
         if (globalViewSettings.isEink) {
           applyEinkMode(true);
         }
@@ -172,10 +174,10 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
         // this runs, the gate renders nothing — guarantees the
         // library can't flash on screen before the lock screen does.
         initializeAppLock({
-          enabled: !!settings.pinCodeEnabled,
-          hash: settings.pinCodeHash,
-          salt: settings.pinCodeSalt,
-          biometricUnlockEnabled: !!settings.biometricUnlockEnabled,
+          enabled: !!stripped.pinCodeEnabled,
+          hash: stripped.pinCodeHash,
+          salt: stripped.pinCodeSalt,
+          biometricUnlockEnabled: !!stripped.biometricUnlockEnabled,
         });
         // Subscribe the bundled-settings publisher to settingsStore
         // changes, AFTER priming the publish snapshot from the just-
@@ -186,7 +188,7 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
         // local defaults to the server with a fresh HLC — overwriting
         // the cross-device authoritative values another device set.
         // Idempotent — safe to call on remount.
-        initSettingsSync(settings);
+        initSettingsSync(stripped);
       });
     }
   }, [

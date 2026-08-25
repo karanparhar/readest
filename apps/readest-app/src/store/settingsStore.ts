@@ -7,6 +7,29 @@ import { broadcastGlobalSettings } from '@/utils/settingsSync';
 
 export type FontPanelView = 'main-fonts' | 'custom-fonts';
 
+/**
+ * One-shot migration that drops persisted keys for cloud backends which are
+ * no longer supported (Google-only auth/cloud). Runs BEFORE the in-memory
+ * store is hydrated so users with stale `settings.readestCloud` /
+ * `settings.webdav` etc. don't trip bugs in code paths that still reference
+ * those fields.
+ */
+export const stripRemovedBackends = (settings: SystemSettings): SystemSettings => {
+  const { readestCloud, webdav, s3, onedrive, icloud, ...rest } = settings as SystemSettings & {
+    readestCloud?: unknown;
+    webdav?: unknown;
+    s3?: unknown;
+    onedrive?: unknown;
+    icloud?: unknown;
+  };
+  void readestCloud;
+  void webdav;
+  void s3;
+  void onedrive;
+  void icloud;
+  return rest as SystemSettings;
+};
+
 interface SettingsState {
   settings: SystemSettings;
   settingsDialogBookKey: string;
