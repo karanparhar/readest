@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import type { FileSyncBackendKind } from '@/services/sync/file/providerRegistry';
 
 /**
- * Shared in-flight state for the library-wide file-sync "Sync now" run,
- * generalised across backends (WebDAV, Google Drive, ...). Was `webdavSyncStore`.
+ * Shared in-flight state for the library-wide file-sync "Sync now" run.
+ * Google-only since the auth/cloud refactor — `FileSyncBackendKind` resolves
+ * to `'gdrive'`, so {@link byKind} and {@link lastErrorByKind} each hold a
+ * single optional entry instead of a per-backend map.
  *
  * Lives outside React component state so the sync survives navigation inside the
  * Settings dialog (drilling out to the Integrations list, or closing the dialog
@@ -12,12 +14,12 @@ import type { FileSyncBackendKind } from '@/services/sync/file/providerRegistry'
  * promise was still running, with no progress affordance.
  *
  * Two responsibilities:
- *   - **Per-backend progress.** Each backend has its own progress entry under
+ *   - **Per-backend progress.** The backend has its own progress entry under
  *     {@link byKind} so its Integrations row + form can render independently.
- *   - **A global library-sync mutex.** Every backend's `syncLibrary` mutates the
+ *   - **A global library-sync mutex.** The backend's `syncLibrary` mutates the
  *     SAME local library (adds downloaded books, reconciles metadata), so two
- *     backends must not run a manual Sync now at once. {@link beginSync} acquires
- *     the lock and returns `false` when another backend already holds it.
+ *     Sync now runs must not happen at once. {@link beginSync} acquires the
+ *     lock and returns `false` when one is already held.
  *
  * Scope is deliberately narrow: only the manual library Sync now path uses this
  * (the per-book reader hook tracks its own refs and surfaces no button), and it
