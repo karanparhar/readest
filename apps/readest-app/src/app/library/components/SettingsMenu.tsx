@@ -16,7 +16,6 @@ import { useThemeStore } from '@/store/themeStore';
 import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import {
-  isReadestCloudEnabled,
   cloudProvidersDisplayName,
   settingsKeyForBackend,
   type CloudSyncProviderKind,
@@ -44,7 +43,6 @@ import dayjs from 'dayjs';
 import { clampSyncTimeForDisplay } from '@/utils/time';
 import UserAvatar from '@/components/UserAvatar';
 import MenuItem from '@/components/MenuItem';
-import Quota from '@/components/Quota';
 import Menu from '@/components/Menu';
 import { type AppLockDialogMode, useAppLockStore } from '@/store/appLockStore';
 
@@ -58,7 +56,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
   const router = useRouter();
   const { envConfig, appService } = useEnv();
   const { user } = useAuth();
-  const { userProfilePlan, quotas } = useQuotaStats(true);
+  const { userProfilePlan } = useQuotaStats(true);
   const { themeMode, setThemeMode } = useThemeStore();
   const { settings, setSettingsDialogOpen } = useSettingsStore();
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(settings.alwaysOnTop);
@@ -272,35 +270,21 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
   const coverDir = savedBookCoverPath ? savedBookCoverPath.split('/').pop() : 'Images';
   const savedBookCoverDescription = `💾 ${coverDir}/last-book-cover.png`;
 
-  // The sync row reports the health of whatever the user selected. Native
-  // cursors freeze while Readest Cloud is off (the book/progress/note channels
-  // are gated), so the file engine's timestamps have to stand in.
-  const readestEnabled = isReadestCloudEnabled(settings);
-  // Only the providers that can ACTUALLY sync right now. A web Google Drive whose
-  // token expired is still enabled but silently skipped, so it must not be counted
-  // as active or reported as synced (it would otherwise inflate the count and lend
-  // its stale lastSyncedAt to "Synced X ago").
+  // The sync row reports the health of the Google Drive backend. Only the
+  // providers that can ACTUALLY sync right now: a web Google Drive whose token
+  // expired is still enabled but silently skipped, so it must not be counted as
+  // active or reported as synced (it would otherwise inflate the count and
+  // lend its stale lastSyncedAt to "Synced X ago").
   const backends = getReadyFileSyncBackends(settings);
-  const providers: CloudSyncProviderKind[] = [
-    ...(readestEnabled ? (['readest'] as const) : []),
-    ...backends,
-  ];
+  const providers: CloudSyncProviderKind[] = backends;
   const providerNames = cloudProvidersDisplayName(providers);
 
   const providerSyncing = backends.some((kind) => !!fileSyncByKind[kind]?.isSyncing);
   const providerLastError = backends.map((kind) => fileSyncLastError[kind]).find(Boolean);
-  const backendLastSyncedAt = Math.max(
+  const lastSyncTime = Math.max(
     0,
     ...backends.map((kind) => settings[settingsKeyForBackend(kind)]?.lastSyncedAt || 0),
   );
-  const nativeLastSyncedAt = readestEnabled
-    ? Math.max(
-        settings.lastSyncedAtBooks || 0,
-        settings.lastSyncedAtConfigs || 0,
-        settings.lastSyncedAtNotes || 0,
-      )
-    : 0;
-  const lastSyncTime = Math.max(backendLastSyncedAt, nativeLastSyncedAt);
 
   const syncRowLabel = providerLastError
     ? _('Sync failed')
@@ -367,17 +351,6 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({ onPullLibrary, setIsDropdow
                     : _('Library sync via {{provider}}', { provider: providerNames })
               }
             />
-            {readestEnabled ? (
-              <button
-                onClick={handleUserProfile}
-                className='hover:bg-base-300 w-full rounded-md'
-                style={{
-                  paddingInlineStart: `${iconSize}px`,
-                }}
-              >
-                <Quota quotas={quotas} labelClassName='h-10 pl-3 pr-2' />
-              </button>
-            ) : null}
             <MenuItem label={_('Account')} onClick={handleUserProfile} />
           </ul>
         </MenuItem>

@@ -29,6 +29,15 @@ export const canBackendRun = (kind: FileSyncBackendKind): boolean => {
   return true;
 };
 
+/**
+ * Enabled backends whose transport can actually run right now — the enabled
+ * set filtered through {@link canBackendRun}. Surfaces (e.g. the SettingsMenu
+ * sync row) use this to list only the backends that would sync if triggered.
+ */
+export const getReadyFileSyncBackends = (
+  settings: ReturnType<typeof useSettingsStore.getState>['settings'],
+): FileSyncBackendKind[] => getEnabledFileSyncBackends(settings).filter(canBackendRun);
+
 /** Build the Google Drive engine, or null when it cannot run here. */
 const buildEngine = async (
   envConfig: EnvConfigType,

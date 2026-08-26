@@ -5,7 +5,6 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useSettingsStore } from '@/store/settingsStore';
-import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useTranslation } from '@/hooks/useTranslation';
 import { debounce } from '@/utils/debounce';
 import { eventDispatcher } from '@/utils/event';
@@ -28,11 +27,12 @@ import { useWindowActiveChanged } from './useWindowActiveChanged';
 /**
  * Per-book file-sync hook — drives EVERY enabled third-party backend at once.
  *
- * Cloud sync providers are independently selectable (#5062): several
- * third-party backends (WebDAV, Google Drive, S3, OneDrive) can mirror a
- * book's progress and annotations in parallel, alongside (or instead of)
- * Readest Cloud, whose native progress sync is `useProgressSync`'s job, not
- * this hook's, and runs independently.
+ * Cloud sync is Google-only since the auth/cloud refactor: Google Drive is the
+ * sole third-party backend. The hook still loops over the enabled backend set
+ * so a future second backend slots in without restructuring, and the merge-
+ * chaining / failure-isolation model below generalises when it does. Native
+ * annotation/progress replica sync (`useNotesSync` / `useProgressSync`) is a
+ * separate pipeline and runs independently.
  *
  * The hook is called exactly once per book (React forbids a variable hook
  * count), so every scalar the single-backend version used to hold —
@@ -105,14 +105,10 @@ export const useFileSync = (bookKey: string) => {
   // Reactive: triggers the auto-push effect on page turns.
   const progress = useBookProgress(bookKey);
 
-  const { userProfilePlan } = useQuotaStats();
-  // Every enabled third-party backend syncs this book in parallel (#5062);
-  // Readest Cloud's native progress sync is useProgressSync's job, not this
-  // hook's, and runs independently.
-  const activeKinds = useMemo(
-    () => getActiveFileSyncBackends(settings, userProfilePlan ?? 'free'),
-    [settings, userProfilePlan],
-  );
+  // Google Drive is the sole third-party backend; its enabled set is the
+  // active set (no plan gate post-refactor). Native annotation/progress
+  // replica sync (useNotesSync / useProgressSync) runs independently.
+  const activeKinds = useMemo(() => getActiveFileSyncBackends(settings), [settings]);
 
   /** Flips true on the first local change after a push, false right before each push. */
   const dirtyRef = useRef(false);
@@ -191,26 +187,11 @@ export const useFileSync = (bookKey: string) => {
       if (kinds.length === 0) return;
       let next = useSettingsStore.getState().settings;
       for (const kind of kinds) {
-        // A switch (rather than a generically-keyed write) keeps each
-        // branch's settings slice type intact; `next[key] = { ...slice, ts }`
-        // does not typecheck when `key` is a union of literal keys.
-        switch (kind) {
-          case 'webdav':
-            next = { ...next, webdav: { ...next.webdav, lastSyncedAt: ts } };
-            break;
-          case 'gdrive':
-            next = { ...next, googleDrive: { ...next.googleDrive, lastSyncedAt: ts } };
-            break;
-          case 's3':
-            next = { ...next, s3: { ...next.s3, lastSyncedAt: ts } };
-            break;
-          case 'onedrive':
-            next = { ...next, onedrive: { ...next.onedrive, lastSyncedAt: ts } };
-            break;
-          case 'icloud':
-            next = { ...next, icloud: { ...next.icloud, lastSyncedAt: ts } };
-            break;
-        }
+        // Google-only: a single backend, so the slice key is always
+        // `googleDrive`. Kept as a keyed write (via settingsKeyForBackend) so
+        // the per-backend loop stays uniform if a second backend ever returns.
+        const key = settingsKeyForBackend(kind);
+        next = { ...next, [key]: { ...next[key], lastSyncedAt: ts } };
       }
       setSettings(next);
       await saveSettings(envConfig, next);
@@ -223,16 +204,8 @@ export const useFileSync = (bookKey: string) => {
   // settings (not the whole settings object) so a `lastSyncedAt` write doesn't
   // rebuild it — which for Drive would re-probe the keychain on every push.
   const engineKey = useMemo(() => {
-    const w = settings.webdav;
-    const c = settings.s3;
-    return [
-      activeKindsKey,
-      `webdav:${w?.serverUrl}:${w?.username}:${w?.password}:${w?.rootPath}`,
-      `gdrive:${settings.googleDrive?.enabled}`,
-      `s3:${c?.endpoint}:${c?.region}:${c?.bucket}:${c?.accessKeyId}:${c?.secretAccessKey}`,
-      `onedrive:${settings.onedrive?.enabled}`,
-    ].join('|');
-  }, [activeKindsKey, settings.webdav, settings.googleDrive, settings.s3, settings.onedrive]);
+    return [activeKindsKey, `gdrive:${settings.googleDrive?.enabled}`].join('|');
+  }, [activeKindsKey, settings.googleDrive]);
 
   const [engines, setEngines] = useState<
     Array<{ kind: FileSyncBackendKind; engine: FileSyncEngine }>
