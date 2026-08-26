@@ -9,82 +9,78 @@ describe('fileSyncStore', () => {
 
   test('beginSync acquires the mutex and marks the backend syncing', () => {
     const { beginSync } = useFileSyncStore.getState();
-    expect(beginSync('webdav', 'Syncing 0 / 3')).toBe(true);
+    expect(beginSync('gdrive', 'Syncing 0 / 3')).toBe(true);
     const s = useFileSyncStore.getState();
-    expect(s.activeKind).toBe('webdav');
-    expect(s.byKind.webdav?.isSyncing).toBe(true);
-    expect(s.byKind.webdav?.progressLabel).toBe('Syncing 0 / 3');
+    expect(s.activeKind).toBe('gdrive');
+    expect(s.byKind.gdrive?.isSyncing).toBe(true);
+    expect(s.byKind.gdrive?.progressLabel).toBe('Syncing 0 / 3');
   });
 
-  test('a second backend cannot begin while another holds the lock', () => {
+  test('a second run cannot begin while the lock is held', () => {
     const { beginSync } = useFileSyncStore.getState();
-    expect(beginSync('webdav', 'a')).toBe(true);
-    // Drive must not start a library sync while WebDAV is mid-run.
+    expect(beginSync('gdrive', 'a')).toBe(true);
+    // The global library-sync mutex blocks a second Sync now while one is mid-run.
     expect(beginSync('gdrive', 'b')).toBe(false);
-    expect(useFileSyncStore.getState().byKind.gdrive).toBeUndefined();
-    expect(useFileSyncStore.getState().activeKind).toBe('webdav');
+    expect(useFileSyncStore.getState().activeKind).toBe('gdrive');
   });
 
   test('endSync releases the lock and resets that backend to idle', () => {
     const { beginSync, endSync } = useFileSyncStore.getState();
-    beginSync('webdav', 'a');
-    endSync('webdav');
+    beginSync('gdrive', 'a');
+    endSync('gdrive');
     const s = useFileSyncStore.getState();
     expect(s.activeKind).toBeNull();
-    expect(s.byKind.webdav?.isSyncing).toBe(false);
-    // Lock is free again for any backend.
+    expect(s.byKind.gdrive?.isSyncing).toBe(false);
+    // Lock is free again for the next run.
     expect(s.beginSync('gdrive', 'c')).toBe(true);
     expect(useFileSyncStore.getState().activeKind).toBe('gdrive');
   });
 
   test('updateProgress sets the label + detail for the active backend', () => {
     const { beginSync, updateProgress } = useFileSyncStore.getState();
-    beginSync('webdav', 'start');
-    updateProgress('webdav', 'Uploading 2 / 3', 'Project Hail Mary');
-    const p = useFileSyncStore.getState().byKind.webdav;
+    beginSync('gdrive', 'start');
+    updateProgress('gdrive', 'Uploading 2 / 3', 'Project Hail Mary');
+    const p = useFileSyncStore.getState().byKind.gdrive;
     expect(p?.progressLabel).toBe('Uploading 2 / 3');
     expect(p?.progressDetail).toBe('Project Hail Mary');
   });
 
-  test('lastError is recorded per backend and survives endSync until cleared', () => {
+  test('lastError is recorded for the backend and survives endSync until cleared', () => {
     const { beginSync, setLastError, endSync } = useFileSyncStore.getState();
-    beginSync('webdav', 'a');
-    setLastError('webdav', 'AUTH_FAILED: 401');
-    endSync('webdav');
+    beginSync('gdrive', 'a');
+    setLastError('gdrive', 'AUTH_FAILED: 401');
+    endSync('gdrive');
     // The health surface reads this after the run finished.
-    expect(useFileSyncStore.getState().lastErrorByKind.webdav).toBe('AUTH_FAILED: 401');
-    expect(useFileSyncStore.getState().lastErrorByKind.gdrive).toBeUndefined();
+    expect(useFileSyncStore.getState().lastErrorByKind.gdrive).toBe('AUTH_FAILED: 401');
     // A later successful run clears it.
-    setLastError('webdav', null);
-    expect(useFileSyncStore.getState().lastErrorByKind.webdav).toBeNull();
+    setLastError('gdrive', null);
+    expect(useFileSyncStore.getState().lastErrorByKind.gdrive).toBeNull();
   });
 });
 
 describe('fileSyncStore pass mutex', () => {
   beforeEach(reset);
 
-  test('switchSync hands the lock to the next backend without releasing it', () => {
+  test('switchSync while the lock is held keeps the backend syncing', () => {
     const store = useFileSyncStore.getState();
-    expect(store.beginSync('webdav', 'Syncing…')).toBe(true);
+    expect(store.beginSync('gdrive', 'Syncing…')).toBe(true);
 
     useFileSyncStore.getState().switchSync('gdrive', 'Syncing…');
 
     const s = useFileSyncStore.getState();
     expect(s.activeKind).toBe('gdrive');
     expect(s.byKind.gdrive?.isSyncing).toBe(true);
-    // The finished backend goes idle, but the lock was never free.
-    expect(s.byKind.webdav?.isSyncing).toBe(false);
     // An auto-sync trying to start mid-pass is still refused.
-    expect(useFileSyncStore.getState().beginSync('s3', 'Syncing…')).toBe(false);
+    expect(useFileSyncStore.getState().beginSync('gdrive', 'Syncing…')).toBe(false);
   });
 
   test('endSync after a switch releases the lock', () => {
-    useFileSyncStore.getState().beginSync('webdav', 'Syncing…');
+    useFileSyncStore.getState().beginSync('gdrive', 'Syncing…');
     useFileSyncStore.getState().switchSync('gdrive', 'Syncing…');
     useFileSyncStore.getState().endSync('gdrive');
 
     expect(useFileSyncStore.getState().activeKind).toBeNull();
-    expect(useFileSyncStore.getState().beginSync('s3', 'Syncing…')).toBe(true);
+    expect(useFileSyncStore.getState().beginSync('gdrive', 'Syncing…')).toBe(true);
   });
 
   test('switchSync with lock free is a no-op and does not acquire the lock', () => {

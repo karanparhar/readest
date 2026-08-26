@@ -41,14 +41,6 @@ vi.mock('@/utils/settingsSync', () => ({
   broadcastGlobalSettings: vi.fn(),
 }));
 
-// absServerStore publishes replica upserts/deletes from its mutators; not
-// exercised here (no replica sync initialized in jsdom), but the module
-// still imports replicaPublish at load time, same as abs-server-store.test.ts.
-vi.mock('@/services/sync/replicaPublish', () => ({
-  publishReplicaUpsert: vi.fn(),
-  publishReplicaDelete: vi.fn(),
-}));
-
 vi.mock('@/services/audiobookshelf/librarySync', () => ({
   removeAbsServerBooks: mocks.removeAbsServerBooks,
 }));

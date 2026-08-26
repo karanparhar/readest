@@ -131,17 +131,22 @@ describe('sanitizeSettingsForBackup - blacklist', () => {
     expect(rec(out['googleDrive'])['lastSyncedAt']).toBeUndefined();
   });
 
-  it('strips readestCloud.disabledAt but keeps readestCloud.enabled', () => {
-    // disabledAt is device-local: it records when THIS device stopped
+  it('strips readestCloud.disabledAt but keeps readestCloud.enabled (legacy backups)', () => {
+    // readestCloud is gone from the type, but old backups may still carry the
+    // slice. disabledAt is device-local: it records when THIS device stopped
     // writing native sync rows, and anchors the mixed-fleet probe. A value
     // restored from another device's backup would corrupt that probe.
     // enabled must survive restore, matching the other providers' `enabled`
     // flags (see issue #5062).
-    const out = sanitizeSettingsForBackup(
-      makeSettings({ readestCloud: { enabled: false, disabledAt: 1234 } }),
+    const out = rec(
+      sanitizeSettingsForBackup(
+        makeSettings({
+          readestCloud: { enabled: false, disabledAt: 1234 },
+        } as unknown as Partial<SystemSettings>),
+      ),
     );
-    expect(out.readestCloud?.disabledAt).toBeUndefined();
-    expect(out.readestCloud?.enabled).toBe(false);
+    expect(rec(out['readestCloud'])['disabledAt']).toBeUndefined();
+    expect(rec(out['readestCloud'])['enabled']).toBe(false);
   });
 
   it('strips transient runtime state', () => {

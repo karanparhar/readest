@@ -17,69 +17,54 @@ const makeLocal = (overrides: Partial<SystemSettings> = {}): SystemSettings =>
   }) as SystemSettings;
 
 describe('mergeSyncedGlobalSettings cloud sync provider flags', () => {
-  test('adopts enabled flags and providerSelectedAt, preserving credentials and cursors', () => {
+  test('adopts enabled flag and providerSelectedAt, preserving credentials and cursors', () => {
     const local = makeLocal({
-      webdav: {
+      googleDrive: {
         enabled: false,
-        serverUrl: 'https://dav',
-        password: 'secret',
+        accountLabel: 'a@b',
         deviceId: 'd1',
         lastSyncedAt: 42,
       },
-      googleDrive: { enabled: true, accountLabel: 'a@b' },
-      onedrive: { enabled: false, accountLabel: 'c@d' },
-    } as Partial<SystemSettings>);
+    });
     const merged = mergeSyncedGlobalSettings(local, {
       globalViewSettings: local.globalViewSettings,
       globalReadSettings: local.globalReadSettings,
       cloudSyncProviders: {
-        webdav: { enabled: true, providerSelectedAt: 999 },
-        googleDrive: { enabled: false },
-        onedrive: { enabled: true, providerSelectedAt: 888 },
+        googleDrive: { enabled: true, providerSelectedAt: 999 },
       },
     });
-    expect(merged.webdav.enabled).toBe(true);
-    expect(merged.webdav.providerSelectedAt).toBe(999);
-    expect(merged.webdav.password).toBe('secret');
-    expect(merged.webdav.deviceId).toBe('d1');
-    expect(merged.webdav.lastSyncedAt).toBe(42);
+    expect(merged.googleDrive.enabled).toBe(true);
+    expect(merged.googleDrive.providerSelectedAt).toBe(999);
+    // Credentials and cursors come from the local slice; the payload carries
+    // only the enabled flag + selection timestamp.
+    expect(merged.googleDrive.accountLabel).toBe('a@b');
+    expect(merged.googleDrive.deviceId).toBe('d1');
+    expect(merged.googleDrive.lastSyncedAt).toBe(42);
+  });
+
+  test('a payload without provider flags leaves the slice untouched', () => {
+    const local = makeLocal({
+      googleDrive: { enabled: true, accountLabel: 'a@b' },
+    });
+    const merged = mergeSyncedGlobalSettings(local, {
+      globalViewSettings: local.globalViewSettings,
+      globalReadSettings: local.globalReadSettings,
+    });
+    expect(merged.googleDrive.enabled).toBe(true);
+    expect(merged.googleDrive.accountLabel).toBe('a@b');
+  });
+
+  test('a disabled flag in the payload flips the local slice off', () => {
+    const local = makeLocal({
+      googleDrive: { enabled: true, accountLabel: 'a@b' },
+    });
+    const merged = mergeSyncedGlobalSettings(local, {
+      globalViewSettings: local.globalViewSettings,
+      globalReadSettings: local.globalReadSettings,
+      cloudSyncProviders: { googleDrive: { enabled: false } },
+    });
     expect(merged.googleDrive.enabled).toBe(false);
     expect(merged.googleDrive.accountLabel).toBe('a@b');
-    expect(merged.onedrive.enabled).toBe(true);
-    expect(merged.onedrive.providerSelectedAt).toBe(888);
-    expect(merged.onedrive.accountLabel).toBe('c@d');
-  });
-
-  test('a payload without provider flags leaves the slices untouched', () => {
-    const local = makeLocal({
-      webdav: { enabled: true, password: 'secret' },
-      onedrive: { enabled: true, accountLabel: 'c@d' },
-    } as Partial<SystemSettings>);
-    const merged = mergeSyncedGlobalSettings(local, {
-      globalViewSettings: local.globalViewSettings,
-      globalReadSettings: local.globalReadSettings,
-    });
-    expect(merged.webdav.enabled).toBe(true);
-    expect(merged.webdav.password).toBe('secret');
-    expect(merged.onedrive.enabled).toBe(true);
-    expect(merged.onedrive.accountLabel).toBe('c@d');
-  });
-
-  test('an absent onedrive flag in the payload leaves the local slice untouched', () => {
-    const local = makeLocal({
-      webdav: { enabled: false },
-      onedrive: { enabled: true, accountLabel: 'c@d' },
-    } as Partial<SystemSettings>);
-    const merged = mergeSyncedGlobalSettings(local, {
-      globalViewSettings: local.globalViewSettings,
-      globalReadSettings: local.globalReadSettings,
-      cloudSyncProviders: {
-        webdav: { enabled: true },
-        googleDrive: { enabled: false },
-      },
-    });
-    expect(merged.onedrive.enabled).toBe(true);
-    expect(merged.onedrive.accountLabel).toBe('c@d');
   });
 });
 

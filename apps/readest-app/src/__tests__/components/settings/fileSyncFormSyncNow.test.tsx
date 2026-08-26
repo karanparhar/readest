@@ -52,13 +52,13 @@ const stored = {
 };
 
 const renderForm = () =>
-  render(<FileSyncForm kind='webdav' stored={stored} persist={vi.fn(async () => {})} />);
+  render(<FileSyncForm kind='gdrive' stored={stored} persist={vi.fn(async () => {})} />);
 
 beforeEach(() => {
   vi.clearAllMocks();
   syncLibrary.mockResolvedValue({ booksSynced: 1, failures: 0, totalBooks: 1, failedBooks: [] });
   useSettingsStore.setState({
-    settings: { webdav: stored } as unknown as SystemSettings,
+    settings: { googleDrive: stored } as unknown as SystemSettings,
   } as never);
   useLibraryStore.setState({ library: [], libraryLoaded: true } as never);
   useFileSyncStore.setState({ byKind: {}, activeKind: null, lastErrorByKind: {} });
@@ -70,17 +70,17 @@ afterEach(() => {
 
 describe('FileSyncForm — Sync now health reporting', () => {
   test('a completed run clears a stale lastError', async () => {
-    useFileSyncStore.getState().setLastError('webdav', 'server unreachable');
+    useFileSyncStore.getState().setLastError('gdrive', 'server unreachable');
     renderForm();
 
     fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
 
     await waitFor(() => {
-      expect(useFileSyncStore.getState().lastErrorByKind.webdav).toBeNull();
+      expect(useFileSyncStore.getState().lastErrorByKind.gdrive).toBeNull();
     });
     expect(syncLibrary).toHaveBeenCalledTimes(1);
     // Mutex released.
-    expect(useFileSyncStore.getState().byKind.webdav?.isSyncing ?? false).toBe(false);
+    expect(useFileSyncStore.getState().byKind.gdrive?.isSyncing ?? false).toBe(false);
   });
 
   test('a failed run records lastError for the health surfaces', async () => {
@@ -90,8 +90,8 @@ describe('FileSyncForm — Sync now health reporting', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sync now' }));
 
     await waitFor(() => {
-      expect(useFileSyncStore.getState().lastErrorByKind.webdav).toBe('boom');
+      expect(useFileSyncStore.getState().lastErrorByKind.gdrive).toBe('boom');
     });
-    expect(useFileSyncStore.getState().byKind.webdav?.isSyncing ?? false).toBe(false);
+    expect(useFileSyncStore.getState().byKind.gdrive?.isSyncing ?? false).toBe(false);
   });
 });

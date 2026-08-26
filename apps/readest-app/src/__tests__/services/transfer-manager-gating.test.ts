@@ -97,9 +97,6 @@ function makeAppService(overrides: Record<string, unknown> = {}) {
     uploadBook: vi.fn().mockResolvedValue(undefined),
     downloadBook: vi.fn().mockResolvedValue(undefined),
     deleteBook: vi.fn().mockResolvedValue(undefined),
-    uploadReplicaFile: vi.fn().mockResolvedValue(undefined),
-    downloadReplicaFile: vi.fn().mockResolvedValue(undefined),
-    deleteReplicaBundle: vi.fn().mockResolvedValue(undefined),
     isMacOSApp: false,
     ...overrides,
   } as Record<string, unknown>;

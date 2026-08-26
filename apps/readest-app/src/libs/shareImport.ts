@@ -77,7 +77,7 @@ export const ensureSharedBookLocal = async ({
     // both the book and the cover there. downloadBook handles missing-cover
     // gracefully (covers may not exist) and sets downloadedAt internally.
     await appService.downloadBook(existing, false, false, reportProgress);
-    // cloudService.downloadBook is silent on failure: if the cloud path
+    // appService.downloadBook is silent on failure: if the cloud path
     // mismatches the local Book's filename (e.g. share-import wrote bytes at
     // the sharer's title, recipient's local Book has a different title) the
     // function resolves without touching downloadedAt and the bytes are still

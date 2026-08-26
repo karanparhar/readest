@@ -3,22 +3,25 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import type { SystemSettings } from '@/types/settings';
 
 /**
- * Issue #4780 — "WebDAV integration doesn't connect persistently".
+ * Issue #4780 — a cloud integration connect that lands while a settings
+ * pull is in flight must not be silently overwritten when the pull
+ * finalises.
  *
  * `useSync.pullChanges` re-reads the live store settings inside its `try`
  * (the `setSettings` path) but its `finally` historically persisted the
  * STALE hook-closure `settings` captured at the render that created the
- * pull. On a slow connection (Android) a settings change that lands while
- * a pull is in flight — most visibly a WebDAV connect, which is the only
+ * pull. On a slow connection a settings change that lands while a pull is
+ * in flight — most visibly a Google Drive connect, which is the only
  * integration NOT re-hydrated from the server replica on next launch — is
  * silently overwritten on disk when the pull completes, so the connection
  * looks "nullified" after the app is closed and reopened.
  *
  * This test drives the real hook: it captures a `pullChanges` while the
  * store holds the pre-connect settings (so its closure binds them), then
- * swaps in the post-connect settings (enabled WebDAV) to model the connect
- * landing mid-pull, and finally resolves the pull. The settings persisted
- * by the pull must reflect the live (connected) state, not the stale one.
+ * swaps in the post-connect settings (enabled Google Drive) to model the
+ * connect landing mid-pull, and finally resolves the pull. The settings
+ * persisted by the pull must reflect the live (connected) state, not the
+ * stale one.
  */
 
 const h = vi.hoisted(() => {
@@ -29,18 +32,14 @@ const h = vi.hoisted(() => {
       lastSyncedAtBooks: 0,
       lastSyncedAtConfigs: 0,
       lastSyncedAtNotes: 0,
-      webdav: {
+      googleDrive: {
         enabled: false,
-        serverUrl: '',
-        username: '',
-        password: '',
-        rootPath: '/',
       },
     }) as unknown as SystemSettings;
 
   // The live store object. `settings` is reassigned (new ref) to model a
   // component calling setSettings with a fresh object, exactly like the
-  // WebDAV connect handler does.
+  // Google Drive connect handler does.
   const storeState = {
     settings: baseSettings(),
     setSettings: vi.fn((s: SystemSettings) => {
@@ -117,7 +116,7 @@ afterEach(() => {
 });
 
 describe('useSync pull persistence (issue #4780)', () => {
-  test('does not clobber a WebDAV connect that lands during an in-flight pull', async () => {
+  test('does not clobber a Google Drive connect that lands during an in-flight pull', async () => {
     // A pull whose network round-trip we control by hand.
     let resolvePull: (value: unknown) => void = () => {};
     syncClientMock.pullChanges.mockImplementation(
@@ -130,7 +129,7 @@ describe('useSync pull persistence (issue #4780)', () => {
     const { result } = renderHook(() => useSync());
 
     // Capture the pull while the store still holds the pre-connect settings,
-    // so its closure binds the disabled-WebDAV snapshot (the stale value).
+    // so its closure binds the disabled-Google-Drive snapshot (the stale value).
     const pull = result.current.pullChanges;
 
     let pullDone!: Promise<unknown>;
@@ -139,16 +138,13 @@ describe('useSync pull persistence (issue #4780)', () => {
       await flush();
     });
 
-    // The user connects WebDAV mid-pull: a fresh settings object with the
-    // connection enabled replaces the live store value.
+    // The user connects Google Drive mid-pull: a fresh settings object with
+    // the connection enabled replaces the live store value.
     const connected = h.baseSettings();
-    connected.webdav = {
+    connected.googleDrive = {
       enabled: true,
-      serverUrl: 'https://dav.example.com',
-      username: 'alice',
-      password: 'secret',
-      rootPath: '/',
-    } as SystemSettings['webdav'];
+      accountLabel: 'alice@example.com',
+    } as SystemSettings['googleDrive'];
     h.storeState.settings = connected;
 
     // The network completes and the pull finalises.
@@ -161,8 +157,8 @@ describe('useSync pull persistence (issue #4780)', () => {
     expect(h.storeState.saveSettings).toHaveBeenCalled();
     const lastSaved = h.storeState.saveSettings.mock.calls.at(-1)![1];
     // The pull must persist the live (connected) settings, never the stale
-    // pre-connect snapshot — otherwise the WebDAV connection is wiped on disk
-    // and reads back as "Not connected" after a restart.
-    expect(lastSaved.webdav.enabled).toBe(true);
+    // pre-connect snapshot — otherwise the Google Drive connection is wiped
+    // on disk and reads back as "Not connected" after a restart.
+    expect(lastSaved.googleDrive.enabled).toBe(true);
   });
 });

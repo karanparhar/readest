@@ -7,11 +7,14 @@ import { useLibraryStore } from '@/store/libraryStore';
 import { useSettingsStore } from '@/store/settingsStore';
 
 /**
- * Regression for #5062: every provider's Disconnect used to call the old
- * exclusive-provider activation helper, which wrote `enabled: false` to ALL
- * FOUR backend slices (that era's "no third-party provider active" meaning).
- * Under multi-select that silently turns off every OTHER mirror too —
- * disconnecting Google Drive would also stop WebDAV.
+ * Regression for #5062: a provider's Disconnect used to call the old
+ * exclusive-provider activation helper, which wrote `enabled: false` to
+ * every backend slice (that era's "no third-party provider active" meaning).
+ * Under multi-select that silently turned off every other mirror too.
+ *
+ * Google Drive is now the only cloud backend, so this guards the narrower
+ * invariant: Disconnect flips only the Google Drive `enabled` flag and
+ * leaves the rest of the settings untouched.
  *
  * This renders the real GoogleDriveForm component and clicks its actual
  * Disconnect button (not just the underlying `withCloudProviderEnabled`
@@ -43,21 +46,14 @@ vi.mock('@/services/sync/providers/gdrive/googleDriveConnect', () => ({
 
 import GoogleDriveForm from '@/components/settings/integrations/GoogleDriveForm';
 
-const bothEnabled = {
+const googleDriveEnabled = {
   version: 1,
-  webdav: {
-    enabled: true,
-    serverUrl: 'https://dav.example.com',
-    username: 'alice',
-    password: 'hunter2',
-    rootPath: '/',
-  },
   googleDrive: { enabled: true, accountLabel: 'alice@example.com' },
 } as unknown as SystemSettings;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useSettingsStore.setState({ settings: bothEnabled } as never);
+  useSettingsStore.setState({ settings: googleDriveEnabled } as never);
   useLibraryStore.setState({ library: [], libraryLoaded: true } as never);
   useFileSyncStore.setState({ byKind: {}, activeKind: null, lastErrorByKind: {} });
 });
@@ -67,7 +63,7 @@ afterEach(() => {
 });
 
 describe('GoogleDriveForm disconnect (#5062 regression)', () => {
-  test('disconnecting Google Drive leaves WebDAV enabled', async () => {
+  test('disconnecting Google Drive flips only the Google Drive enabled flag', async () => {
     render(<GoogleDriveForm />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
@@ -76,9 +72,8 @@ describe('GoogleDriveForm disconnect (#5062 regression)', () => {
       expect(useSettingsStore.getState().settings.googleDrive.enabled).toBe(false);
     });
 
-    // The bug: the old disconnect call disabled EVERY backend, not just gdrive.
-    expect(useSettingsStore.getState().settings.webdav.enabled).toBe(true);
-    // WebDAV's config must also survive untouched (only its own Disconnect tears it down).
-    expect(useSettingsStore.getState().settings.webdav.serverUrl).toBe('https://dav.example.com');
+    // Disconnect is a full teardown of the Google Drive slice: the account
+    // label is cleared too (the keychain token went with runGoogleDriveDisconnect).
+    expect(useSettingsStore.getState().settings.googleDrive.accountLabel).toBeUndefined();
   });
 });
