@@ -98,8 +98,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::set_selection_suppressed,
             commands::set_multicast_lock,
             commands::read_share_clip_html,
-            commands::icloud_container_status,
-            commands::icloud_ensure_downloaded,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

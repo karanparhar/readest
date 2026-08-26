@@ -47,8 +47,6 @@ const COMMANDS: &[&str] = &[
     "set_selection_suppressed",
     "set_multicast_lock",
     "read_share_clip_html",
-    "icloud_container_status",
-    "icloud_ensure_downloaded",
 ];
 
 fn main() {
