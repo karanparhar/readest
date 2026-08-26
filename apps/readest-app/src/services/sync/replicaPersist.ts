@@ -1,21 +1,21 @@
 import type { EnvConfigType } from '@/services/environment';
 
 /**
- * Replica-side mutators (applyRemote*, softDelete*, markAvailable*)
- * fire from the boot-time pull / download-complete handlers, NOT the
- * settings UI. UI mutators couple their state writes with an explicit
- * saveCustomX(envConfig) call; the replica path has no such pairing,
- * so without auto-persist the next loadCustomX would read stale
- * settings and wipe the in-memory rows.
+ * Replica-side auto-persist env holder — stubbed.
  *
- * EnvProvider registers envConfig once at boot; every replica-aware
- * store reads it via getReplicaPersistEnv() inside its replica-side
- * mutators and fire-and-forget saves through it.
+ * The replica-sync subsystem was removed. The replica-side mutators
+ * (`applyRemote*`, `softDelete*`, `markAvailable*`) in the custom-font /
+ * texture / dictionary / OPDS / ABS stores previously read the boot-registered
+ * envConfig from here to fire-and-forget persist their in-memory state. With
+ * replica pull gone, those mutators are only reached from legacy code paths
+ * and no env is registered, so `getReplicaPersistEnv` always returns `null`
+ * and the persist calls self-skip. The stores keep importing it so they
+ * compile unchanged.
  */
-let replicaPersistEnv: EnvConfigType | null = null;
+const replicaPersistEnv: EnvConfigType | null = null;
 
-export const enableReplicaAutoPersist = (envConfig: EnvConfigType | null): void => {
-  replicaPersistEnv = envConfig;
+export const enableReplicaAutoPersist = (_envConfig: EnvConfigType | null): void => {
+  void _envConfig;
 };
 
 export const getReplicaPersistEnv = (): EnvConfigType | null => replicaPersistEnv;

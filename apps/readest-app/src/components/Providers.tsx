@@ -35,10 +35,7 @@ import { CommandPaletteProvider, CommandPalette } from '@/components/command-pal
 import AtmosphereOverlay from '@/components/AtmosphereOverlay';
 import AppLockScreen from '@/components/AppLockScreen';
 import AppLockDialog from '@/components/settings/AppLockDialog';
-import PassphrasePrompt from '@/components/PassphrasePrompt';
 import TelemetryConsentDialog from '@/components/TelemetryConsentDialog';
-import { upgradeToKeychainIfAvailable } from '@/libs/crypto/passphrase';
-import { cryptoSession } from '@/libs/crypto/session';
 import { useAppLockStore } from '@/store/appLockStore';
 import { stripRemovedBackends } from '@/store/settingsStore';
 import { initSettingsSync } from '@/services/sync/replicaSettingsSync';
@@ -200,18 +197,6 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
     initializeAppLock,
   ]);
 
-  // Sync-passphrase boot path: upgrade the passphrase store from
-  // ephemeral to OS keychain on Tauri (probe is async — must run after
-  // the platform check resolves), then attempt a silent unlock from
-  // the saved passphrase. Failures are silent — the gate prompts on
-  // first encrypted-field operation if we couldn't restore.
-  useEffect(() => {
-    void (async () => {
-      await upgradeToKeychainIfAvailable();
-      await cryptoSession.tryRestoreFromStore();
-    })();
-  }, []);
-
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
     if (!meta) return;
@@ -243,7 +228,6 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
                   {children}
                   <CommandPalette />
                   <AtmosphereOverlay />
-                  <PassphrasePrompt />
                 </div>
                 <AppLockDialog />
                 <TelemetryConsentDialog

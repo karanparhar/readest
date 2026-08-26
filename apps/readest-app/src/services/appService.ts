@@ -19,7 +19,7 @@ import { SchemaType } from '@/services/database/migrate';
 import { Book, BookConfig, BookContent, ImportBookOptions, ViewSettings } from '@/types/book';
 import type { BookNav } from '@/services/nav';
 import { getLibraryFilename, getLibraryBackupFilename } from '@/utils/book';
-import { getDirPath, getFilename } from '@/utils/path';
+import { getFilename } from '@/utils/path';
 
 import { getOSPlatform } from '@/utils/misc';
 import { isStoragePermissionError, requestStoragePermission } from '@/utils/permission';
@@ -468,44 +468,6 @@ export abstract class BaseAppService implements AppService {
     _media?: string,
   ): Promise<string | undefined> {
     return undefined;
-  }
-
-  async uploadReplicaFile(
-    _kind: string,
-    _replicaId: string,
-    _filename: string,
-    _lfp: string,
-    _base: BaseDir,
-    _onProgress: ProgressHandler,
-  ): Promise<void> {
-    return;
-  }
-
-  async downloadReplicaFile(
-    _kind: string,
-    _replicaId: string,
-    _filename: string,
-    lfp: string,
-    base: BaseDir,
-    _onProgress?: ProgressHandler,
-  ) {
-    // The native downloader writes with `File::create`, which does not create
-    // parent directories, so a missing bundle dir fails as an opaque
-    // "No such file or directory (os error 2)" (issue #5675). The pull path
-    // only mkdirs when it MINTS a bundle dir for a record it has never seen —
-    // a record whose directory was lost afterwards (custom root dir changed,
-    // external storage cleared), a transfer replayed from the persisted queue,
-    // and Retry All all arrive here with nothing on disk. Book downloads have
-    // always guarded this; do the same here. `createDir` is recursive, so this
-    // is a no-op when the dir exists.
-    const bundleDir = getDirPath(lfp);
-    if (bundleDir) {
-      await this.fs.createDir(bundleDir, base, true);
-    }
-  }
-
-  async deleteReplicaBundle(_kind: string, _replicaId: string, _filenames: string[]) {
-    return;
   }
 
   async uploadBook(_book: Book, _onProgress?: ProgressHandler): Promise<void> {

@@ -162,21 +162,12 @@ describe('provider gating of book uploads', () => {
     expect(ids).toEqual([]);
   });
 
-  test('downloads and replica transfers are never gated', async () => {
+  test('downloads are never gated', async () => {
     webdavSelected();
     await initManager();
 
     const downloadId = transferManager.queueDownload(makeBook());
     expect(downloadId).toBeTruthy();
-
-    const replicaId = transferManager.queueReplicaUpload(
-      'font',
-      'font-1',
-      'A Font',
-      [{ logical: 'font.ttf', lfp: '/tmp/font.ttf', byteSize: 10 }],
-      'Data' as never,
-    );
-    expect(replicaId).toBeTruthy();
   });
 });
 
@@ -242,42 +233,15 @@ describe('settings-loaded barrier', () => {
 
     expect(appService['uploadBook']).toHaveBeenCalledTimes(1);
   });
-
-  test('replica transfers are not stalled by the barrier', async () => {
-    settingsNotLoaded();
-    const appService = makeAppService();
-    await initManager(appService);
-
-    transferManager.queueReplicaDownload(
-      'font',
-      'font-1',
-      'A Font',
-      [{ logical: 'font.ttf', lfp: '/tmp/font.ttf', byteSize: 10 }],
-      'Data' as never,
-    );
-    await flushAsync();
-
-    expect(appService['downloadReplicaFile']).toHaveBeenCalled();
-  });
 });
 
 describe('policy cancellation on restore/reconcile', () => {
-  test('pre-switch pending book uploads are policy-cancelled on restore; downloads and replicas survive', async () => {
+  test('pre-switch pending book uploads are policy-cancelled on restore; downloads survive', async () => {
     webdavSelected();
     const persisted = {
       transfers: {
         up1: makeTransferItem({ id: 'up1' }),
         down1: makeTransferItem({ id: 'down1', type: 'download', bookHash: 'hash2' }),
-        rep1: makeTransferItem({
-          id: 'rep1',
-          kind: 'replica',
-          type: 'upload',
-          bookHash: '',
-          replicaKind: 'font',
-          replicaId: 'font-1',
-          replicaFiles: [{ logical: 'font.ttf', lfp: '/tmp/font.ttf', byteSize: 10 }],
-          replicaBase: 'Data' as never,
-        }),
       },
       isQueuePaused: true,
     };
@@ -290,7 +254,6 @@ describe('policy cancellation on restore/reconcile', () => {
     expect(transfers['up1']?.status).toBe('cancelled');
     expect(transfers['up1']?.cancelReason).toBe('policy');
     expect(transfers['down1']?.status).toBe('pending');
-    expect(transfers['rep1']?.status).toBe('pending');
   });
 
   test('switching providers after init policy-cancels pending book uploads', async () => {

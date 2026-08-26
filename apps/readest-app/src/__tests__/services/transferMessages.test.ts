@@ -38,32 +38,4 @@ describe('getTransferMessages', () => {
     expect(m.failure.download).toBe('Failed to download book: Moby Dick');
     expect(m.failure.delete).toBe('Failed to delete cloud backup of the book: Moby Dick');
   });
-
-  test('dictionary replica transfer uses generic "File" copy', () => {
-    const m = getTransferMessages(
-      baseTransfer({
-        kind: 'replica',
-        replicaKind: 'dictionary',
-        bookHash: '',
-        bookTitle: 'Longman Phrasal Verbs',
-      }),
-      passthroughT,
-    );
-    expect(m.success.upload).toBe('File uploaded: Longman Phrasal Verbs');
-    expect(m.success.download).toBe('File downloaded: Longman Phrasal Verbs');
-    expect(m.success.delete).toBe('Deleted cloud copy of the file: Longman Phrasal Verbs');
-    expect(m.failure.upload).toBe('Failed to upload file: Longman Phrasal Verbs');
-    expect(m.failure.download).toBe('Failed to download file: Longman Phrasal Verbs');
-    expect(m.failure.delete).toBe('Failed to delete cloud copy of the file: Longman Phrasal Verbs');
-  });
-
-  test('font replica transfer also uses generic "File" copy', () => {
-    const m = getTransferMessages(
-      baseTransfer({ kind: 'replica', replicaKind: 'font', bookTitle: 'Roboto' }),
-      passthroughT,
-    );
-    expect(m.success.upload).toBe('File uploaded: Roboto');
-    expect(m.success.download).toBe('File downloaded: Roboto');
-    expect(m.success.delete).toBe('Deleted cloud copy of the file: Roboto');
-  });
 });

@@ -8,10 +8,9 @@ export interface TransferMessages {
 
 /**
  * Build per-kind toast copy for a TransferItem. Books keep their own
- * copy ("Book uploaded"); everything else — replica kinds (dictionary,
- * font, textures, OPDS catalogs, …) and any future transfer kind —
- * falls through to the generic "File uploaded" string so we don't have
- * to add a per-kind branch each time.
+ * copy ("Book uploaded"); any future non-book kind falls through to
+ * the generic "File uploaded" string so we don't have to add a
+ * per-kind branch each time.
  */
 export const getTransferMessages = (
   transfer: TransferItem,

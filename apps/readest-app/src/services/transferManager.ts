@@ -1,10 +1,10 @@
 import { Book } from '@/types/book';
-import { AppService, BaseDir } from '@/types/system';
-import { useTransferStore, TransferItem, ReplicaTransferFile } from '@/store/transferStore';
+import { AppService } from '@/types/system';
+import { useTransferStore, TransferItem } from '@/store/transferStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { isReadestCloudStorageActive } from '@/services/sync/cloudSyncProvider';
 import { TranslationFunc } from '@/hooks/useTranslation';
-import { createProgressThrottle, ProgressHandler, ProgressPayload } from '@/utils/transfer';
+import { createProgressThrottle, ProgressPayload } from '@/utils/transfer';
 import { eventDispatcher } from '@/utils/event';
 import { isAudiobook } from '@/utils/audiobook';
 import { getTransferMessages } from './transferMessages';
@@ -53,9 +53,7 @@ class TransferManager {
    * `{}`); `settings.version` truthiness is the loaded signal (same
    * convention as useSync). Before hydration the provider is unknown, so
    * book uploads are deferred rather than judged — acting on unknown
-   * settings could both mis-cancel and mis-allow. Replica transfers and
-   * downloads are never deferred: they are not provider-gated and the
-   * boot-time replica pull relies on waitUntilReady().
+   * settings could both mis-cancel and mis-allow.
    */
   private isSettingsLoaded(): boolean {
     return !!useSettingsStore.getState().settings?.version;
@@ -136,9 +134,9 @@ class TransferManager {
 
   /**
    * Resolves once `initialize()` has completed. Lets callers that need
-   * to enqueue transfers (e.g., the boot-time replica pull) defer until
-   * the manager is wired up — the manager only inits after the library
-   * is loaded, which can lag well behind app boot.
+   * to enqueue transfers defer until the manager is wired up — the
+   * manager only inits after the library is loaded, which can lag well
+   * behind app boot.
    */
   waitUntilReady(): Promise<void> {
     return this.readyPromise;
@@ -219,94 +217,6 @@ class TransferManager {
     return books
       .map((book) => this.queueUpload(book, priority))
       .filter((id): id is string => id !== null);
-  }
-
-  queueReplicaUpload(
-    replicaKind: string,
-    replicaId: string,
-    displayTitle: string,
-    files: ReplicaTransferFile[],
-    base: BaseDir,
-    opts: { priority?: number; isBackground?: boolean; reincarnation?: string } = {},
-  ): string | null {
-    if (!this.isReady()) {
-      console.warn('TransferManager not initialized');
-      return null;
-    }
-    const store = useTransferStore.getState();
-    const existing = store.getReplicaTransfer(replicaKind, replicaId, 'upload');
-    if (existing) return existing.id;
-
-    const id = store.addReplicaTransfer(replicaKind, replicaId, displayTitle, 'upload', {
-      priority: opts.priority,
-      // Replica transfers are background sync by default — see the note on
-      // queueReplicaDownload.
-      isBackground: opts.isBackground ?? true,
-      files,
-      base,
-      reincarnation: opts.reincarnation,
-    });
-    this.persistQueue();
-    this.processQueue();
-    return id;
-  }
-
-  queueReplicaDownload(
-    replicaKind: string,
-    replicaId: string,
-    displayTitle: string,
-    files: ReplicaTransferFile[],
-    base: BaseDir,
-    opts: { priority?: number; isBackground?: boolean } = {},
-  ): string | null {
-    if (!this.isReady()) {
-      console.warn('TransferManager not initialized');
-      return null;
-    }
-    const store = useTransferStore.getState();
-    const existing = store.getReplicaTransfer(replicaKind, replicaId, 'download');
-    if (existing) return existing.id;
-
-    const id = store.addReplicaTransfer(replicaKind, replicaId, displayTitle, 'download', {
-      priority: opts.priority,
-      // Replica bundles (fonts, textures, dictionaries, OPDS catalogs) sync on
-      // their own schedule, not because the user asked for this file right
-      // now. Toasting each one turns a fresh device into a wall of
-      // notifications, so they are background — and therefore silent — unless
-      // a caller explicitly opts into the foreground.
-      isBackground: opts.isBackground ?? true,
-      files,
-      base,
-    });
-    this.persistQueue();
-    this.processQueue();
-    return id;
-  }
-
-  queueReplicaDelete(
-    replicaKind: string,
-    replicaId: string,
-    displayTitle: string,
-    filenames: string[],
-    opts: { priority?: number; isBackground?: boolean } = {},
-  ): string | null {
-    if (!this.isReady()) {
-      console.warn('TransferManager not initialized');
-      return null;
-    }
-    const store = useTransferStore.getState();
-    const existing = store.getReplicaTransfer(replicaKind, replicaId, 'delete');
-    if (existing) return existing.id;
-
-    const id = store.addReplicaTransfer(replicaKind, replicaId, displayTitle, 'delete', {
-      priority: opts.priority,
-      // Background by default — see the note on queueReplicaDownload.
-      isBackground: opts.isBackground ?? true,
-      files: filenames.map((logical) => ({ logical, lfp: '', byteSize: 0 })),
-    });
-    this.persistQueue();
-    this.processQueue();
-    return id;
   }
 
   cancelTransfer(transferId: string): void {
@@ -447,11 +357,7 @@ class TransferManager {
     };
 
     try {
-      if (transfer.kind === 'replica') {
-        await this.executeReplicaTransfer(transfer, progressHandler, abortController);
-      } else {
-        await this.executeBookTransfer(transfer, progressHandler, abortController);
-      }
+      await this.executeBookTransfer(transfer, progressHandler, abortController);
 
       // Land the final progress value that the throttle may still be holding.
       progressThrottle.flush();
@@ -499,10 +405,10 @@ class TransferManager {
         }, delay);
       } else {
         // Background work fails quietly. The success path has always honoured
-        // `isBackground`; the failure path did not, so a broken replica sync
-        // fired one toast per file (issue #5675 — sixteen "Failed to download
-        // file" toasts for sixteen fonts). The failure is still recorded on
-        // the transfer, which is what the Transfer Queue panel reads.
+        // `isBackground`; the failure path did not, so a broken background
+        // batch fired one toast per file (issue #5675). The failure is still
+        // recorded on the transfer, which is what the Transfer Queue panel
+        // reads.
         if (!transfer.isBackground) {
           if (errorMessage.includes('Not authenticated')) {
             eventDispatcher.dispatch('toast', {
@@ -584,94 +490,6 @@ class TransferManager {
     } else if (transfer.type === 'delete') {
       await this.appService!.deleteBook(book, 'cloud');
       await this.updateBook!(book);
-    }
-  }
-
-  private async executeReplicaTransfer(
-    transfer: TransferItem,
-    progressHandler: (p: ProgressPayload) => void,
-    _abortController: AbortController,
-  ): Promise<void> {
-    const kind = transfer.replicaKind!;
-    const replicaId = transfer.replicaId!;
-    const files = transfer.replicaFiles ?? [];
-
-    if (transfer.type === 'delete') {
-      await this.appService!.deleteReplicaBundle(
-        kind,
-        replicaId,
-        files.map((f) => f.logical),
-      );
-      eventDispatcher.dispatch('replica-transfer-complete', {
-        kind,
-        replicaId,
-        type: 'delete',
-        filenames: files.map((f) => f.logical),
-      });
-      return;
-    }
-
-    if (files.length === 0) {
-      throw new Error(`replica ${transfer.type} requires replicaFiles on the transfer`);
-    }
-
-    const totalBytes = files.reduce((sum, f) => sum + f.byteSize, 0) || 1;
-    let bytesAlreadyDone = 0;
-    const fileProgressHandler =
-      (filenameSize: number): ProgressHandler =>
-      (p: ProgressPayload) => {
-        const fileFraction = p.total > 0 ? p.progress / p.total : 0;
-        const overallTransferred = bytesAlreadyDone + filenameSize * fileFraction;
-        progressHandler({
-          progress: overallTransferred,
-          total: totalBytes,
-          transferSpeed: p.transferSpeed,
-        });
-      };
-
-    if (transfer.type === 'upload') {
-      const base = transfer.replicaBase!;
-      for (const file of files) {
-        await this.appService!.uploadReplicaFile(
-          kind,
-          replicaId,
-          file.logical,
-          file.lfp,
-          base,
-          fileProgressHandler(file.byteSize),
-        );
-        bytesAlreadyDone += file.byteSize;
-      }
-      eventDispatcher.dispatch('replica-transfer-complete', {
-        kind,
-        replicaId,
-        reincarnation: transfer.replicaReincarnation,
-        type: 'upload',
-        files,
-      });
-      return;
-    }
-
-    if (transfer.type === 'download') {
-      const base = transfer.replicaBase!;
-      for (const file of files) {
-        await this.appService!.downloadReplicaFile(
-          kind,
-          replicaId,
-          file.logical,
-          file.lfp,
-          base,
-          fileProgressHandler(file.byteSize),
-        );
-        bytesAlreadyDone += file.byteSize;
-      }
-      eventDispatcher.dispatch('replica-transfer-complete', {
-        kind,
-        replicaId,
-        type: 'download',
-        files,
-      });
-      return;
     }
   }
 

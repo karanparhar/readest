@@ -1,22 +1,18 @@
 import { create } from 'zustand';
 import type { EnvConfigType } from '@/services/environment';
 import type { OPDSCatalog } from '@/types/opds';
+import { md5 } from '@/utils/md5';
 import { useSettingsStore } from './settingsStore';
 import { getReplicaPersistEnv } from '@/services/sync/replicaPersist';
-import { publishReplicaDelete, publishReplicaUpsert } from '@/services/sync/replicaPublish';
-import {
-  computeOpdsCatalogContentId,
-  OPDS_CATALOG_KIND,
-} from '@/services/sync/adapters/opdsCatalog';
 
-const publishOpdsUpsert = (catalog: OPDSCatalog): void => {
-  if (!catalog.contentId) return;
-  void publishReplicaUpsert(OPDS_CATALOG_KIND, catalog, catalog.contentId, catalog.reincarnation);
-};
-
-const publishOpdsDelete = (contentId: string): void => {
-  void publishReplicaDelete(OPDS_CATALOG_KIND, contentId);
-};
+/**
+ * Stable cross-device identity for an OPDS catalog, computed from a
+ * normalized URL. Retained as a local helper now that the replica
+ * adapter module is gone; the value is still stored on the catalog and
+ * used for local dedup via `findByContentId`.
+ */
+export const computeOpdsCatalogContentId = (url: string): string =>
+  md5(`opds:${url.trim().toLowerCase()}`);
 
 /**
  * Backfill `contentId` (and `addedAt`) on legacy catalogs that predate
@@ -164,7 +160,6 @@ export const useCustomOPDSStore = create<OPDSStoreState>((set, get) => ({
           : [...state.catalogs, catalog];
       return { catalogs };
     });
-    publishOpdsUpsert(catalog);
     return catalog;
   },
 
@@ -185,7 +180,6 @@ export const useCustomOPDSStore = create<OPDSStoreState>((set, get) => ({
         catalogs: state.catalogs.map((c, i) => (i === idx ? updated! : c)),
       };
     });
-    if (updated) publishOpdsUpsert(updated);
     return updated;
   },
 
@@ -195,7 +189,6 @@ export const useCustomOPDSStore = create<OPDSStoreState>((set, get) => ({
     set((state) => ({
       catalogs: state.catalogs.map((c) => (c.id === id ? { ...c, deletedAt: Date.now() } : c)),
     }));
-    if (catalog.contentId) publishOpdsDelete(catalog.contentId);
     return true;
   },
 
@@ -217,7 +210,6 @@ export const useCustomOPDSStore = create<OPDSStoreState>((set, get) => ({
     });
     if (!updated.length) return;
     set({ catalogs });
-    updated.forEach(publishOpdsUpsert);
   },
 
   applyRemoteCatalog: (catalog) => {
@@ -274,9 +266,6 @@ export const useCustomOPDSStore = create<OPDSStoreState>((set, get) => ({
       // contentIds so existing catalogs start syncing on next push.
       if (backfilled !== persisted) {
         await get().saveCustomOPDSCatalogs(_envConfig);
-        for (const c of backfilled) {
-          if (c.contentId && !c.deletedAt) publishOpdsUpsert(c);
-        }
       }
     } catch (error) {
       console.error('Failed to load OPDS catalogs:', error);

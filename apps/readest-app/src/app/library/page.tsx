@@ -124,7 +124,6 @@ import NowPlayingBar from './components/NowPlayingBar';
 import { clipPageWithSignInFallback } from '@/services/send/clipSignIn';
 import ClipSignInAlert from '@/components/ClipSignInAlert';
 import useShortcuts from '@/hooks/useShortcuts';
-import { useReplicaPull } from '@/hooks/useReplicaPull';
 import { useCustomFonts } from '@/hooks/useCustomFonts';
 import DropIndicator from '@/components/DropIndicator';
 import SettingsDialog from '@/components/settings/SettingsDialog';
@@ -237,17 +236,10 @@ const LibraryPageContent = ({ searchParams }: { searchParams: ReadonlyURLSearchP
   // during a bulk cloud upload (issue #5047).
   const isTransferQueueOpen = useTransferStore((state) => state.isTransferQueueOpen);
 
-  // Library page pulls user replicas (dictionaries, custom fonts,
-  // background textures, OPDS catalogs, Audiobookshelf servers, bundled
-  // settings). Deferred 10s; module-scoped dedup means a later navigation
-  // to the reader won't re-pull the same kind.
-  useReplicaPull({
-    kinds: ['dictionary', 'font', 'texture', 'opds_catalog', 'abs_server', 'settings'],
-  });
   // Hydrate the custom-font store from persisted settings so the Font
   // panel sees imported fonts even when opened straight from the
-  // library — the replica pull above is auth-gated and the reader's
-  // FoliateViewer hydration never runs without a book open.
+  // library — the reader's FoliateViewer hydration never runs without a
+  // book open.
   useCustomFonts();
   const [showCatalogManager, setShowCatalogManager] = useState(
     searchParams?.get('opds') === 'true',

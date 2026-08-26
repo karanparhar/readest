@@ -1,10 +1,9 @@
 import { create } from 'zustand';
-import type { BaseDir } from '@/types/system';
 import { INDETERMINATE_PROGRESS } from '@/utils/transfer';
 
 export type TransferType = 'upload' | 'download' | 'delete';
 export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
-export type TransferKind = 'book' | 'replica';
+export type TransferKind = 'book';
 /**
  * Why a transfer was cancelled. 'user' = an explicit cancel action;
  * 'policy' = the app cancelled it because Readest Cloud is not the
@@ -15,22 +14,11 @@ export type TransferKind = 'book' | 'replica';
  */
 export type TransferCancelReason = 'user' | 'policy';
 
-export interface ReplicaTransferFile {
-  logical: string;
-  lfp: string;
-  byteSize: number;
-}
-
 export interface TransferItem {
   id: string;
   kind: TransferKind;
   bookHash: string;
   bookTitle: string;
-  replicaKind?: string;
-  replicaId?: string;
-  replicaReincarnation?: string;
-  replicaFiles?: ReplicaTransferFile[];
-  replicaBase?: BaseDir;
   type: TransferType;
   status: TransferStatus;
   progress: number; // 0-100 percentage
@@ -66,19 +54,6 @@ interface TransferState {
     priority?: number,
     isBackground?: boolean,
   ) => string;
-  addReplicaTransfer: (
-    replicaKind: string,
-    replicaId: string,
-    displayTitle: string,
-    type: TransferType,
-    opts?: {
-      priority?: number;
-      isBackground?: boolean;
-      files?: ReplicaTransferFile[];
-      base?: BaseDir;
-      reincarnation?: string;
-    },
-  ) => string;
   removeTransfer: (transferId: string) => void;
   updateTransferProgress: (
     transferId: string,
@@ -110,11 +85,6 @@ interface TransferState {
   getFailedTransfers: () => TransferItem[];
   getCompletedTransfers: () => TransferItem[];
   getTransferByBookHash: (bookHash: string, type: TransferType) => TransferItem | undefined;
-  getReplicaTransfer: (
-    replicaKind: string,
-    replicaId: string,
-    type: TransferType,
-  ) => TransferItem | undefined;
   getQueueStats: () => {
     pending: number;
     active: number;
@@ -201,38 +171,6 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       createdAt: Date.now(),
       priority,
       isBackground,
-    };
-
-    set((state) => ({
-      transfers: { ...state.transfers, [id]: transfer },
-    }));
-
-    return id;
-  },
-
-  addReplicaTransfer: (replicaKind, replicaId, displayTitle, type, opts = {}) => {
-    const id = generateTransferId();
-    const transfer: TransferItem = {
-      id,
-      kind: 'replica',
-      bookHash: '',
-      bookTitle: displayTitle,
-      replicaKind,
-      replicaId,
-      replicaReincarnation: opts.reincarnation,
-      replicaFiles: opts.files,
-      replicaBase: opts.base,
-      type,
-      status: 'pending',
-      progress: 0,
-      totalBytes: opts.files?.reduce((sum, f) => sum + f.byteSize, 0) ?? 0,
-      transferredBytes: 0,
-      transferSpeed: 0,
-      retryCount: 0,
-      maxRetries: 3,
-      createdAt: Date.now(),
-      priority: opts.priority ?? 10,
-      isBackground: opts.isBackground ?? false,
     };
 
     set((state) => ({
@@ -418,17 +356,6 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       (t) =>
         t.kind === 'book' &&
         t.bookHash === bookHash &&
-        t.type === type &&
-        ['pending', 'in_progress'].includes(t.status),
-    );
-  },
-
-  getReplicaTransfer: (replicaKind, replicaId, type) => {
-    return Object.values(get().transfers).find(
-      (t) =>
-        t.kind === 'replica' &&
-        t.replicaKind === replicaKind &&
-        t.replicaId === replicaId &&
         t.type === type &&
         ['pending', 'in_progress'].includes(t.status),
     );
