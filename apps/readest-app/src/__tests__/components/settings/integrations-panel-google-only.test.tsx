@@ -8,9 +8,6 @@ import { useABSServerStore } from '@/store/absServerStore';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import type { SystemSettings } from '@/types/settings';
 
-vi.mock('@/hooks/useQuotaStats', () => ({
-  useQuotaStats: () => ({ userProfilePlan: 'free' }),
-}));
 vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => (key: string) => key,
 }));

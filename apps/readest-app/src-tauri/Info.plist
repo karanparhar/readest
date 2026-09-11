@@ -16,6 +16,42 @@
     <true/>
     <key>UIRequiresFullScreen</key>
     <false/>
+    <!-- URL schemes this app handles. On macOS tauri-plugin-deep-link's
+         register_all() is a no-op (UnsupportedPlatform — runtime scheme
+         registration is Windows/Linux only), so custom-scheme routing on
+         macOS depends entirely on this declaration. Without it, Launch
+         Services never delivers com.googleusercontent.apps.<id>:/oauthredirect
+         to the app, RunEvent::Opened is never emitted, onOpenUrl never fires,
+         and the Google Drive Connect flow spins until its 15-minute deadline.
+         Mirrors Info-ios.plist and the deep-link.desktop scheme in
+         tauri.conf.json. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+      <!-- The app's own deep-link scheme: readest://book/…, readest://annotation/…,
+           readest://share/… (see useOpenBookLink / useOpenAnnotationLink /
+           useOpenShareLink). Mirrors the `readest` entry in Info-ios.plist and
+           the deep-link.desktop scheme in tauri.conf.json. -->
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>com.bilingify.readest</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>readest</string>
+        </array>
+      </dict>
+      <!-- Google Drive OAuth reverse-DNS redirect (iOS-type client, no secret).
+           The scheme is the client id's identifier part; it must match the
+           deep-link.desktop scheme and the client id baked into
+           buildGoogleDriveProvider.ts byte-for-byte. -->
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>com.googleusercontent.apps.gdrive-oauth</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.209390247301-ctpmep68ppfa56r1b8tr35e4qi4p60kq</string>
+        </array>
+      </dict>
+    </array>
     <key>CFBundleDocumentTypes</key>
     <array>
       <dict>

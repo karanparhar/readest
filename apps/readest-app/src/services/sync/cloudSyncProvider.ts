@@ -68,16 +68,6 @@ export const isReadestCloudStorageActive = (
   _settings: SystemSettings | null | undefined,
 ): boolean => false;
 
-/**
- * Plan-gating was removed with the Readest Cloud quota gate (no
- * `isCloudSyncAllowed` remains). The cached-plan plumbing that non-React
- * modules used to resolve the async JWT plan is now vestigial; kept as a no-op
- * so {@link useQuotaStats} keeps compiling until its call site is cleaned up.
- */
-export const setCachedUserPlan = (_plan: unknown): void => {
-  /* no-op — Google Drive is not plan-gated */
-};
-
 export interface CloudSyncGate {
   /** Readest Cloud syncs the library channels. Always false post-refactor. */
   readest: boolean;

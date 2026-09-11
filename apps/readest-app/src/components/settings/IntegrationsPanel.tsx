@@ -18,7 +18,6 @@ import { useEnv } from '@/context/EnvContext';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useKeyDownActions } from '@/hooks/useKeyDownActions';
-import { useQuotaStats } from '@/hooks/useQuotaStats';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useCustomOPDSStore } from '@/store/customOPDSStore';
 import { useABSServerStore } from '@/store/absServerStore';
@@ -80,7 +79,6 @@ const IntegrationsPanel: React.FC = () => {
   const absCount = absServers.filter((s) => !s.deletedAt).length;
   const isGDriveSyncing = useFileSyncStore((s) => s.byKind.gdrive?.isSyncing ?? false);
   const gdriveLastError = useFileSyncStore((s) => s.lastErrorByKind.gdrive);
-  const { userProfilePlan } = useQuotaStats();
 
   const [subPage, setSubPage] = useState<SubPage>(null);
 
@@ -144,7 +142,7 @@ const IntegrationsPanel: React.FC = () => {
       setSubPage('gdrive');
     }
     setRequestedSubPage(null);
-  }, [requestedSubPage, setRequestedSubPage, userProfilePlan]);
+  }, [requestedSubPage, setRequestedSubPage]);
 
   // Sub-page wrapper matches the list-view's `my-4 w-full` so the
   // SubPageHeader's "Integrations" label lands at the exact same Y position

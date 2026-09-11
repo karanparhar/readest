@@ -30,7 +30,20 @@ export const pluginManifestSchema = z.strictObject({
   id: identifierSchema,
   protocolVersion: z.literal(PLUGIN_PROTOCOL_VERSION),
   pluginVersion: z.string().min(1).max(64),
-  builtAt: z.iso.datetime().optional(),
+  // NOTE: do not use `z.iso.*` OR `z.string().datetime()` here. Both reach
+  // the lazily-loaded Zod v4 iso submodule at module top-level, which makes
+  // Turbopack defer `zod/v4/classic/iso.js` to a separate chunk whose
+  // `ZodISODateTime` const is still in the temporal dead zone when
+  // `datetime()` runs, crashing the production build on startup with
+  // "Cannot access 'h' before initialization" (a blank WebView). This does
+  // not reproduce in `tauri dev` or under vitest — only in the built app.
+  // `builtAt` is only ever a literal string in the manifest and is never
+  // read as a Date, so an ISO-8601 regex gives equivalent validation without
+  // touching the iso submodule.
+  builtAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u)
+    .optional(),
   contributions: z.strictObject({
     dictionaryFormats: z.array(dictionaryFormatContributionSchema).min(1).max(16),
   }),

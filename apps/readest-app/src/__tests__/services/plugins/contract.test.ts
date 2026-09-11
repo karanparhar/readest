@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import {
   MAX_PLUGIN_RESOURCE_BYTES,
   MAX_PLUGIN_SQL_REQUEST_BYTES,
@@ -8,6 +10,36 @@ import {
   pluginManifestSchema,
   pluginRequestSchema,
 } from '@/services/plugins/contract';
+
+// This module is in the startup eager graph (the store pulls in the
+// dictionaries/plugin provider which imports this contract). Read the source
+// statically so the guard works even though the bug only manifests in the
+// Turbopack production build, not under vitest.
+const contractSource = readFileSync(
+  resolve(process.cwd(), 'src/services/plugins/contract.ts'),
+  'utf-8',
+);
+
+// Strip comments so the guard flags only real call sites, not mentions of the
+// pattern in explanatory comments.
+const contractCode = contractSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+describe('plugin contract module loading', () => {
+  test('does not reach the Zod iso submodule at module top-level (Turbopack production TDZ)', () => {
+    // The Zod v4 iso helpers (datetime, date, time, duration, timestamp) are
+    // lazily loaded. Calling any of them at module top-level — whether via
+    // `z.iso.*` OR `z.string().datetime()` — makes Turbopack defer
+    // `zod/v4/classic/iso.js` to a separate chunk whose `ZodISODateTime`
+    // const is still in the temporal dead zone when the helper runs,
+    // crashing the production build on startup with "Cannot access 'h'
+    // before initialization" (blank WebView). This does NOT reproduce under
+    // vitest or `tauri dev`, so guard statically. `builtAt` is only ever a
+    // literal manifest string, never read as a Date, so validate it with a
+    // regex instead.
+    expect(contractCode).not.toMatch(/z\.iso\./);
+    expect(contractCode).not.toMatch(/\.(datetime|date|time|duration|timestamp)\s*\(/);
+  });
+});
 
 const manifest = {
   id: 'readest.yomitan',

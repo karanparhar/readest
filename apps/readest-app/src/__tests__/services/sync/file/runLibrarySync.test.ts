@@ -1,6 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useSettingsStore } from '@/store/settingsStore';
-import { setCachedUserPlan } from '@/services/sync/cloudSyncProvider';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useFileSyncStore } from '@/store/fileSyncStore';
 import type { SystemSettings } from '@/types/settings';
@@ -85,7 +84,6 @@ describe('runFileLibrarySyncPass', () => {
     useSettingsStore.getState().setSettings(gdriveSettings);
     useLibraryStore.setState({ library: [makeBook('h1')], libraryLoaded: true });
     useFileSyncStore.setState({ byKind: {}, activeKind: null, lastErrorByKind: {} });
-    setCachedUserPlan('pro');
   });
 
   test('runs the enabled backend and sums the result', async () => {
@@ -155,7 +153,6 @@ describe('runFileBookUpload', () => {
     pushBookFile.mockReset().mockResolvedValue({ uploaded: true });
     pushBookCover.mockReset().mockResolvedValue({ uploaded: true });
     useSettingsStore.getState().setSettings(gdriveSettings);
-    setCachedUserPlan('pro');
   });
 
   test('pushes the book to the enabled backend', async () => {
@@ -183,7 +180,6 @@ describe('runFileBookDownload', () => {
   beforeEach(() => {
     downloadBookFile.mockReset();
     useSettingsStore.getState().setSettings(gdriveSettings);
-    setCachedUserPlan('pro');
   });
 
   test('succeeds when the backend has the file', async () => {
@@ -216,7 +212,6 @@ describe('getReadyFileSyncBackends', () => {
   beforeEach(() => {
     vi.mocked(isWebAppPlatform).mockReturnValue(true);
     vi.mocked(hasValidWebDriveToken).mockReturnValue(true);
-    setCachedUserPlan('pro');
   });
 
   test('includes gdrive when the web token is valid', () => {
