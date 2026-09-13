@@ -224,6 +224,9 @@ export interface BookLayout {
   compactMarginPx?: number; // deprecated
   gapPercent: number;
   scrolled: boolean;
+  // Reading Mode for PDFs: reflow each page's text like an EPUB (see
+  // utils/pdfReflow.ts). Meaningless for other formats.
+  pdfReflow: boolean;
   scrolledDirection: 'vertical' | 'horizontal';
   webtoonMode: boolean;
   noContinuousScroll: boolean;

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-cover-webview-region"
+description = "Enables the cover_webview_region command without any pre-configured scope."
+commands.allow = ["cover_webview_region"]
+
+[[permission]]
+identifier = "deny-cover-webview-region"
+description = "Denies the cover_webview_region command without any pre-configured scope."
+commands.deny = ["cover_webview_region"]

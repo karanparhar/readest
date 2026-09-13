@@ -60,8 +60,15 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
   const { envConfig, appService } = useEnv();
   const { getConfig, getBookData } = useBookDataStore();
   const { setSettingsDialogOpen, setSettingsDialogBookKey } = useSettingsStore();
-  const { getView, getViewSettings, getViewState, getProgress, setViewSettings, recreateViewer } =
-    useReaderStore();
+  const {
+    getView,
+    getViewSettings,
+    getViewState,
+    getProgress,
+    setViewSettings,
+    togglePdfReflow,
+    recreateViewer,
+  } = useReaderStore();
   const config = getConfig(bookKey)!;
   const bookData = getBookData(bookKey)!;
   const viewSettings = getViewSettings(bookKey)!;
@@ -76,6 +83,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
   const [isParagraphMode, setParagraphMode] = useState(
     viewSettings?.paragraphMode?.enabled ?? false,
   );
+  const [pdfReflow, setPdfReflow] = useState(viewSettings!.pdfReflow ?? false);
   const [zoomLevel, setZoomLevel] = useState(viewSettings!.zoomLevel!);
   const [contrast, setContrast] = useState(viewSettings!.contrast ?? 100);
   const [zoomMode, setZoomMode] = useState(viewSettings!.zoomMode!);
@@ -101,6 +109,24 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
     setParagraphMode(!isParagraphMode);
     eventDispatcher.dispatch('toggle-paragraph-mode', { bookKey });
     setIsDropdownOpen?.(false);
+  };
+
+  // Reading Mode for PDFs: swap the fixed-layout pdf.js book for a reflowable
+  // wrapper (utils/pdfReflow.ts) so font controls and Paragraph Mode apply.
+  const togglePdfReflowMode = () => {
+    setIsDropdownOpen?.(false);
+    const enabling = !pdfReflow;
+    setPdfReflow(enabling);
+    // The overlay is anchored to the current book's DOM; tear it down before
+    // the view is swapped, and stop TTS reading from the old view.
+    if (!enabling && isParagraphMode) {
+      setParagraphMode(false);
+      eventDispatcher.dispatch('toggle-paragraph-mode', { bookKey });
+    }
+    eventDispatcher.dispatch('tts-stop', { bookKey });
+    // Per-book choice (skipGlobal), and no style re-apply — the view remounts.
+    void saveViewSettings(envConfig, bookKey, 'pdfReflow', enabling, true, false);
+    togglePdfReflow(bookKey);
   };
 
   const openSettingsDialog = () => {
@@ -452,6 +478,14 @@ const ViewMenu: React.FC<ViewMenuProps> = ({
           </>
           <hr aria-hidden='true' className='border-base-300 my-1' />
         </>
+      )}
+
+      {bookData.book?.format === 'PDF' && (
+        <MenuItem
+          label={_('Reading Mode')}
+          Icon={pdfReflow ? MdCheck : undefined}
+          onClick={togglePdfReflowMode}
+        />
       )}
 
       {!bookData.isFixedLayout && (

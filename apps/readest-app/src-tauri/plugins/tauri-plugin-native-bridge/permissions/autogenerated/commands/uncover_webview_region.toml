@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-uncover-webview-region"
+description = "Enables the uncover_webview_region command without any pre-configured scope."
+commands.allow = ["uncover_webview_region"]
+
+[[permission]]
+identifier = "deny-uncover-webview-region"
+description = "Denies the uncover_webview_region command without any pre-configured scope."
+commands.deny = ["uncover_webview_region"]

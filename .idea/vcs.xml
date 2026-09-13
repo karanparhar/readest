@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/apps/readest-app/.claude/skills/gstack" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/apps/readest-app/src-tauri/plugins/tauri-plugin-turso" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/apps/readest-app/src-tauri/plugins/tauri-plugin-webview-upgrade" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/foliate-js" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/js-mdict" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/qcms" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/simplecc-wasm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/simplecc-wasm/OpenCC" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/tao" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/tauri" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/packages/tauri-plugins" vcs="Git" />
+  </component>
+</project>

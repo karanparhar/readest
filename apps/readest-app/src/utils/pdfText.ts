@@ -35,6 +35,7 @@ const COLUMN_TOLERANCE_EM = 4;
 const WORD_SPACE_EM = 0.3;
 
 const HYPHEN_AT_END = /[-\u2010\u00AD]\s*$/u;
+const PX_NUMBER = /(\d+(?:\.\d+)?)px/;
 const SOFT_HYPHEN_AT_END = /\u00AD\s*$/u;
 // Scripts set without inter-word spaces, plus their punctuation blocks.
 const NO_SPACE_SCRIPT =
@@ -146,7 +147,7 @@ interface TextLayerRow {
   br: Element | null;
 }
 
-const splitRows = (textLayer: Element): TextLayerRow[] => {
+export const splitRows = (textLayer: Element): TextLayerRow[] => {
   const rows: TextLayerRow[] = [];
   let row: TextLayerRow = { spans: [], br: null };
   for (const child of Array.from(textLayer.children)) {
@@ -237,4 +238,119 @@ export const getPdfTextFromRange = (range: Range, textLayer: Element): string =>
     }
   });
   return text;
+};
+
+/**
+ * Page-space dimensions parsed out of the pdf.js text layer's inline size,
+ * written as `round(down, var(--total-scale-factor) * Npx, ...)`. Returns the
+ * first N in px, or null when the string carries none.
+ */
+export const parseLayerDimensions = (style: string): number | null => {
+  const match = PX_NUMBER.exec(style);
+  return match ? parseFloat(match[1]!) : null;
+};
+
+// No rendered width is stored on text-layer spans, so a run's extent is
+// estimated from its character count: full-width scripts advance ~1em per
+// glyph, everything else ~0.5em.
+const estimateTextWidth = (text: string, em: number): number => {
+  let width = 0;
+  for (const char of text) width += NO_SPACE_SCRIPT.test(char) ? em : 0.5 * em;
+  return width;
+};
+
+const percentOf = (value: string, total: number): number | null => {
+  const parsed = parseFloat(value);
+  return Number.isNaN(parsed) || !total ? null : (parsed / 100) * total;
+};
+
+// Row → line from the spans' inline styles (left/top in %, --font-height in
+// page-space px) instead of getBoundingClientRect, so it works on detached
+// documents — createDocument() output is never in a live layout.
+const measureRowFromStyles = (
+  { spans }: TextLayerRow,
+  space: { width: number; height: number },
+  emOverride: number,
+): PdfLine => {
+  const line: PdfLine = {
+    text: '',
+    left: Infinity,
+    right: -Infinity,
+    top: 0,
+    em: 0,
+    firstWordWidth: 0,
+  };
+  let dominantLength = 0;
+  for (const el of spans) {
+    const text = el.textContent ?? '';
+    line.text += text;
+    const trimmed = text.trim();
+    if (!trimmed) continue;
+    const style = (el as HTMLElement).style;
+    const left = percentOf(style.left, space.width);
+    if (left == null) continue;
+    line.left = Math.min(line.left, left);
+    const fontHeight = parseFloat(style.getPropertyValue('--font-height'));
+    const em = emOverride || (Number.isFinite(fontHeight) && fontHeight > 0 ? fontHeight : 0);
+    const width = estimateTextWidth(trimmed, em);
+    line.right = Math.max(line.right, left + width);
+    const top = percentOf(style.top, space.height);
+    if (trimmed.length > dominantLength && top != null) {
+      dominantLength = trimmed.length;
+      line.top = top;
+      line.em = em;
+    }
+    if (!line.firstWordWidth && em > 0) {
+      const word = trimmed.split(/\s+/)[0] ?? '';
+      line.firstWordWidth = (width * word.length) / trimmed.length;
+    }
+  }
+  return line;
+};
+
+/**
+ * Lines of a pdf.js text-layer element measured from inline styles, for
+ * documents that are not in a live layout. `pageDims` is the page size in px
+ * (from the layer's inline dimensions or the book's viewport); without it the
+ * line geometry degrades to percent units with the em derived from the median
+ * line pitch, and without any styling at all every line is unmeasured, which
+ * `classifyPdfLineBreaks` treats as one paragraph per line.
+ */
+export const pdfLinesFromTextLayer = (
+  textLayer: Element,
+  pageDims: { width: number; height: number } | null,
+): PdfLine[] => {
+  const rows = splitRows(textLayer);
+  if (pageDims) return rows.map((row) => measureRowFromStyles(row, pageDims, 0));
+  const space = { width: 100, height: 100 };
+  const pitch = medianPitch(rows.map((row) => measureRowFromStyles(row, space, 0)));
+  const em = pitch ? pitch / 1.2 : 0;
+  return rows.map((row) => measureRowFromStyles(row, space, em));
+};
+
+/** Paragraphs reassembled from text-layer lines using the classifier's breaks. */
+export const joinLinesToParagraphs = (lines: PdfLine[]): string[] => {
+  const breaks = classifyPdfLineBreaks(lines);
+  const paragraphs: string[] = [];
+  let current = '';
+  let lastLine = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i]!.text.trim();
+    if (!text) continue;
+    if (current) {
+      const kind = lastLine >= 0 ? (breaks[lastLine] ?? 'paragraph') : 'paragraph';
+      if (kind === 'paragraph') {
+        paragraphs.push(current);
+        current = '';
+      } else if (kind === 'dehyphenate') {
+        current = current.replace(HYPHEN_AT_END, '');
+      } else if (kind === 'space') {
+        current += ' ';
+      }
+    }
+    current += text;
+    lastLine = i;
+  }
+  if (current) paragraphs.push(current);
+  return paragraphs;
 };

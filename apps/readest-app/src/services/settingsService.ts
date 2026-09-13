@@ -35,6 +35,23 @@ export interface Context {
   isAppDataSandbox: boolean;
 }
 
+/**
+ * v1 → v2: phones that still carry the old 'fit-page' zoom default move to
+ * 'fit-width'. 'fit-page' letterboxes fixed-layout books (PDF/CBZ) on tall
+ * phone screens and renders the text unreadably small. Only the old default
+ * value is rewritten, so a deliberate user choice (any other mode) survives.
+ */
+export function migrateMobileFitWidthZoom(
+  view: ViewSettings,
+  isMobile: boolean,
+  fromVersion: number,
+): void {
+  if (!isMobile || fromVersion >= 2) return;
+  if (view.zoomMode === 'fit-page') {
+    view.zoomMode = 'fit-width';
+  }
+}
+
 export function getDefaultViewSettings(ctx: Context): ViewSettings {
   return {
     ...DEFAULT_BOOK_LAYOUT,
@@ -157,6 +174,7 @@ export async function loadSettings(ctx: Context): Promise<SystemSettings> {
     ...getDefaultViewSettings(ctx),
     ...settings.globalViewSettings,
   };
+  migrateMobileFitWidthZoom(settings.globalViewSettings, ctx.isMobile, version);
   settings.aiSettings = {
     ...DEFAULT_AI_SETTINGS,
     ...settings.aiSettings,

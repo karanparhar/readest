@@ -556,6 +556,9 @@ describe('services/constants', () => {
       expect(typeof DEFAULT_MOBILE_VIEW_SETTINGS.defaultFont).toBe('string');
       expect(DEFAULT_MOBILE_VIEW_SETTINGS.disableDoubleClick).toBe(true);
       expect(typeof DEFAULT_MOBILE_VIEW_SETTINGS.spreadMode).toBe('string');
+      // PDFs open fit-to-width on phones so the text stays readable
+      // ('fit-page' letterboxes the page and renders tiny text).
+      expect(DEFAULT_MOBILE_VIEW_SETTINGS.zoomMode).toBe('fit-width');
     });
 
     it('DEFAULT_CJK_VIEW_SETTINGS has CJK typography overrides', () => {

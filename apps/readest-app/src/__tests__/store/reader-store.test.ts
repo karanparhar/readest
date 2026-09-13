@@ -37,6 +37,8 @@ vi.mock('@/store/libraryStore', () => {
 
 vi.mock('@/utils/misc', () => ({
   uniqueId: vi.fn(() => 'mock-uid-123'),
+  // pdfReflow (transitively imported) needs this for the empty-page placeholder
+  stubTranslation: vi.fn((text: string) => text),
 }));
 
 // These are transitive imports needed by readerStore

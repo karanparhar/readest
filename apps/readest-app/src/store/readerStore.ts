@@ -22,7 +22,9 @@ import type { FileSystem } from '@/types/system';
 import { isFeedBookUrl, parseFeedBookUrl } from '@/services/rss/feedBookUrl';
 import { openFeedBookDoc } from '@/services/rss/feedReader';
 import { computeBookNav, hydrateBookNav, isBookNavCacheCurrent, updateToc } from '@/services/nav';
+import { CFI } from '@/libs/document';
 import { formatTitle, getMetadataHash, getPrimaryLanguage } from '@/utils/book';
+import { makeReflowPDFBook } from '@/utils/pdfReflow';
 import { getBaseFilename } from '@/utils/path';
 import { SUPPORTED_LANGNAMES } from '@/services/constants';
 import { useSettingsStore } from './settingsStore';
@@ -111,6 +113,7 @@ interface ReaderStore {
   setGridInsets: (key: string, insets: Insets | null) => void;
   setViewInited: (key: string, inited: boolean) => void;
   setPreviewMode: (key: string, previewMode: boolean) => void;
+  togglePdfReflow: (key: string) => void;
   recreateViewer: (envConfig: EnvConfigType, key: string) => void;
 }
 
@@ -297,9 +300,30 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
         book.metaHash = getMetadataHash(bookDoc.metadata);
       }
 
+      // Reading Mode for PDFs: swap in a reflowable wrapper book (lazy, cheap —
+      // page text is only extracted when a section is rendered) while keeping
+      // the original pdf.js book alive for toggling back. See utils/pdfReflow.ts.
+      const originalPdfDoc =
+        bookDoc === bookData?.pdfReflowBookDoc ? (bookData.pdfBookDoc ?? bookDoc) : bookDoc;
+      const pdfReflowOn = book.format === 'PDF' && !!config.viewSettings?.pdfReflow;
+      const pdfBookDoc = pdfReflowOn ? originalPdfDoc : null;
+      const pdfReflowBookDoc = pdfReflowOn
+        ? (bookData?.pdfReflowBookDoc ?? makeReflowPDFBook(originalPdfDoc))
+        : null;
+      const activeDoc = pdfReflowBookDoc ?? originalPdfDoc;
       const isFixedLayout =
-        bookDoc.rendition?.layout === 'pre-paginated' || FIXED_LAYOUT_FORMATS.has(book.format);
-      const newBookData: BookData = { id, book, file, config, bookDoc, isFixedLayout };
+        !pdfReflowBookDoc &&
+        (activeDoc.rendition?.layout === 'pre-paginated' || FIXED_LAYOUT_FORMATS.has(book.format));
+      const newBookData: BookData = {
+        id,
+        book,
+        file,
+        config,
+        bookDoc: activeDoc,
+        isFixedLayout,
+        pdfBookDoc,
+        pdfReflowBookDoc,
+      };
       useBookDataStore.setState((state) => ({
         booksData: {
           ...state.booksData,
@@ -561,6 +585,48 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
         },
       },
     })),
+
+  togglePdfReflow: (key: string) => {
+    const id = key.split('-')[0]!;
+    const bookData = useBookDataStore.getState().booksData[id];
+    if (!bookData?.bookDoc || bookData.book?.format !== 'PDF') return;
+    const enabling = !bookData.pdfReflowBookDoc || bookData.bookDoc !== bookData.pdfReflowBookDoc;
+    // Both books have one section per PDF page, so progress maps exactly in
+    // both directions: section index === page index.
+    const original = bookData.pdfBookDoc ?? bookData.bookDoc;
+    const reflow = bookData.pdfReflowBookDoc ?? makeReflowPDFBook(original);
+    const targetSections = (enabling ? reflow : original).sections.length;
+    const progress = getBookProgress(key);
+    const pageIndex = Math.min(Math.max(progress?.index ?? 0, 0), Math.max(0, targetSections - 1));
+    if (bookData.config) {
+      bookData.config.location = CFI.fake.fromIndex(pageIndex);
+    }
+    useBookDataStore.setState((state) => ({
+      booksData: {
+        ...state.booksData,
+        [id]: {
+          ...bookData,
+          bookDoc: enabling ? reflow : original,
+          pdfBookDoc: original,
+          pdfReflowBookDoc: enabling ? reflow : null,
+          isFixedLayout: !enabling,
+        },
+      },
+    }));
+    // Mint exactly one new viewerKey to remount <FoliateViewer> with the other
+    // book. Not recreateViewer(): it re-runs DocumentLoader.open(), which would
+    // discard this swap and re-parse the PDF (readest#5277 double-mount hazard).
+    set((state) => ({
+      viewStates: {
+        ...state.viewStates,
+        [key]: {
+          ...state.viewStates[key]!,
+          view: null,
+          viewerKey: `${key}-${uniqueId()}`,
+        },
+      },
+    }));
+  },
 
   recreateViewer: (envConfig: EnvConfigType, key: string) => {
     const id = key.split('-')[0]!;

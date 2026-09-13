@@ -308,6 +308,7 @@ export const DEFAULT_BOOK_LAYOUT: BookLayout = {
   compactMarginRightPx: 16,
   gapPercent: 5,
   scrolled: false,
+  pdfReflow: false,
   scrolledDirection: 'vertical',
   webtoonMode: false,
   noContinuousScroll: false,
@@ -373,6 +374,9 @@ export const DEFAULT_MOBILE_VIEW_SETTINGS: Partial<ViewSettings> = {
   defaultFont: 'Sans-serif',
   disableDoubleClick: true,
   spreadMode: 'none',
+  // Fixed-layout books (PDF/CBZ): 'fit-page' letterboxes a phone screen and
+  // renders unreadably small text, so default to fit-to-width on mobile.
+  zoomMode: 'fit-width',
 };
 
 export const DEFAULT_CJK_VIEW_SETTINGS: Partial<ViewSettings> = {
@@ -512,7 +516,7 @@ export const DEFAULT_VIEW_SETTINGS_CONFIG: ViewSettingsConfig = {
   isGlobal: true,
 };
 
-export const SYSTEM_SETTINGS_VERSION = 1;
+export const SYSTEM_SETTINGS_VERSION = 2;
 
 export const SERIF_FONTS = [
   'Bitter',

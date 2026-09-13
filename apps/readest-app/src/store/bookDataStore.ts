@@ -63,6 +63,10 @@ export interface BookData {
   config: BookConfig | null;
   bookDoc: BookDoc | null;
   isFixedLayout: boolean;
+  /** Original pdf.js book, set while the Reading Mode reflow book is active. */
+  pdfBookDoc?: BookDoc | null;
+  /** Cached reflow wrapper; `bookDoc === pdfReflowBookDoc` iff Reading Mode is on. */
+  pdfReflowBookDoc?: BookDoc | null;
 }
 
 interface BookDataState {

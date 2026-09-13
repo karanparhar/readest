@@ -354,6 +354,32 @@ Denies the copy_uri_to_path command without any pre-configured scope.
 <tr>
 <td>
 
+`native-bridge:allow-cover-webview-region`
+
+</td>
+<td>
+
+Enables the cover_webview_region command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-cover-webview-region`
+
+</td>
+<td>
+
+Denies the cover_webview_region command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `native-bridge:allow-get-external-sdcard-path`
 
 </td>
@@ -770,6 +796,58 @@ Denies the iap_restore_purchases command without any pre-configured scope.
 <tr>
 <td>
 
+`native-bridge:allow-icloud-container-status`
+
+</td>
+<td>
+
+Enables the icloud_container_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-icloud-container-status`
+
+</td>
+<td>
+
+Denies the icloud_container_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:allow-icloud-ensure-downloaded`
+
+</td>
+<td>
+
+Enables the icloud_ensure_downloaded command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-icloud-ensure-downloaded`
+
+</td>
+<td>
+
+Denies the icloud_ensure_downloaded command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `native-bridge:allow-install-package`
 
 </td>
@@ -900,6 +978,32 @@ Denies the open_external_url command without any pre-configured scope.
 <tr>
 <td>
 
+`native-bridge:allow-open-web-browser`
+
+</td>
+<td>
+
+Enables the open_web_browser command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-open-web-browser`
+
+</td>
+<td>
+
+Denies the open_web_browser command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `native-bridge:allow-read-share-clip-html`
 
 </td>
@@ -997,6 +1101,32 @@ Enables the remove_listener command without any pre-configured scope.
 <td>
 
 Denies the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:allow-render-pdf-cover`
+
+</td>
+<td>
+
+Enables the render_pdf_cover command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-render-pdf-cover`
+
+</td>
+<td>
+
+Denies the render_pdf_cover command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1316,6 +1446,32 @@ Denies the set_system_ui_visibility command without any pre-configured scope.
 <tr>
 <td>
 
+`native-bridge:allow-set-web-browser-status`
+
+</td>
+<td>
+
+Enables the set_web_browser_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-set-web-browser-status`
+
+</td>
+<td>
+
+Denies the set_web_browser_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `native-bridge:allow-show-file-picker`
 
 </td>
@@ -1413,6 +1569,32 @@ Enables the stop_ambient_light_updates command without any pre-configured scope.
 <td>
 
 Denies the stop_ambient_light_updates command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:allow-uncover-webview-region`
+
+</td>
+<td>
+
+Enables the uncover_webview_region command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`native-bridge:deny-uncover-webview-region`
+
+</td>
+<td>
+
+Denies the uncover_webview_region command without any pre-configured scope.
 
 </td>
 </tr>

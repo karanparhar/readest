@@ -427,6 +427,18 @@
           "markdownDescription": "Denies the copy_uri_to_path command without any pre-configured scope."
         },
         {
+          "description": "Enables the cover_webview_region command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-cover-webview-region",
+          "markdownDescription": "Enables the cover_webview_region command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the cover_webview_region command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-cover-webview-region",
+          "markdownDescription": "Denies the cover_webview_region command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_external_sdcard_path command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-external-sdcard-path",
@@ -619,6 +631,30 @@
           "markdownDescription": "Denies the iap_restore_purchases command without any pre-configured scope."
         },
         {
+          "description": "Enables the icloud_container_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-icloud-container-status",
+          "markdownDescription": "Enables the icloud_container_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the icloud_container_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-icloud-container-status",
+          "markdownDescription": "Denies the icloud_container_status command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the icloud_ensure_downloaded command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-icloud-ensure-downloaded",
+          "markdownDescription": "Enables the icloud_ensure_downloaded command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the icloud_ensure_downloaded command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-icloud-ensure-downloaded",
+          "markdownDescription": "Denies the icloud_ensure_downloaded command without any pre-configured scope."
+        },
+        {
           "description": "Enables the install_package command without any pre-configured scope.",
           "type": "string",
           "const": "allow-install-package",
@@ -679,6 +715,18 @@
           "markdownDescription": "Denies the open_external_url command without any pre-configured scope."
         },
         {
+          "description": "Enables the open_web_browser command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-open-web-browser",
+          "markdownDescription": "Enables the open_web_browser command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_web_browser command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-open-web-browser",
+          "markdownDescription": "Denies the open_web_browser command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_share_clip_html command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-share-clip-html",
@@ -725,6 +773,18 @@
           "type": "string",
           "const": "deny-remove-listener",
           "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the render_pdf_cover command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-render-pdf-cover",
+          "markdownDescription": "Enables the render_pdf_cover command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the render_pdf_cover command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-render-pdf-cover",
+          "markdownDescription": "Denies the render_pdf_cover command without any pre-configured scope."
         },
         {
           "description": "Enables the request-permissions command without any pre-configured scope.",
@@ -871,6 +931,18 @@
           "markdownDescription": "Denies the set_system_ui_visibility command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_web_browser_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-web-browser-status",
+          "markdownDescription": "Enables the set_web_browser_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_web_browser_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-web-browser-status",
+          "markdownDescription": "Denies the set_web_browser_status command without any pre-configured scope."
+        },
+        {
           "description": "Enables the show_file_picker command without any pre-configured scope.",
           "type": "string",
           "const": "allow-show-file-picker",
@@ -917,6 +989,18 @@
           "type": "string",
           "const": "deny-stop-ambient-light-updates",
           "markdownDescription": "Denies the stop_ambient_light_updates command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the uncover_webview_region command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-uncover-webview-region",
+          "markdownDescription": "Enables the uncover_webview_region command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the uncover_webview_region command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-uncover-webview-region",
+          "markdownDescription": "Denies the uncover_webview_region command without any pre-configured scope."
         },
         {
           "description": "Enables the update_reading_widget command without any pre-configured scope.",
